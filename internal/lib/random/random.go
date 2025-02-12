@@ -16,6 +16,7 @@ var (
 
 func NewRandomString(size int) string {
 	mu.Lock()
+	//nolint:gosec // генератор случайных чисел приемлем для некриптографических случаев использования.
 	rnd := rand.New(rand.NewSource(seed))
 	seed++
 	mu.Unlock()
