@@ -1,4 +1,4 @@
-package deleteAlias
+package delete
 
 import (
 	"errors"
@@ -18,7 +18,7 @@ type URLDeleter interface {
 
 func New(log *slog.Logger, URLDeleter URLDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.url.deleteAlias.New"
+		const op = "handlers.url.delete.New"
 
 		log = log.With(
 			slog.String("op", op),

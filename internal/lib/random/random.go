@@ -6,6 +6,7 @@ import (
 	"time"
 )
 
+//nolint:gosec // Weak random number generator is acceptable for non-cryptographic use cases.
 var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
 
 const alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"

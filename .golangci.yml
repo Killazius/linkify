@@ -1,0 +1,17 @@
+linters:
+  disable-all: true
+  enable:
+    - errcheck
+    - goconst
+    - gosec
+    - govet
+    - ineffassign
+    - gosimple
+    - staticcheck
+    - unused
+    - revive
+    - typecheck
+    - paralleltest
+    - testifylint
+
+

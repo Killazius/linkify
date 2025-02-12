@@ -26,9 +26,12 @@ func TestNewRandomString(t *testing.T) {
 			size: 10,
 		},
 	}
+	t.Parallel()
 	for _, testCase := range testCases {
 		testCase := testCase
+
 		t.Run(testCase.name, func(t *testing.T) {
+			t.Parallel()
 			str1 := random.NewRandomString(testCase.size)
 			str2 := random.NewRandomString(testCase.size)
 

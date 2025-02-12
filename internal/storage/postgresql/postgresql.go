@@ -1,4 +1,4 @@
-package postgreSQL
+package postgresql
 
 import (
 	"database/sql"
@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	_ "github.com/jackc/pgx/v5/stdlib" // driver postgresql
 	"shorturl/internal/storage"
 	"time"
 )
@@ -16,7 +16,7 @@ type Storage struct {
 }
 
 func NewStorage(url string) (*Storage, error) {
-	const op = "storage.postgreSQL.NewStorage"
+	const op = "storage.postgresql.NewStorage"
 	db, err := sql.Open("pgx", url)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
@@ -48,7 +48,7 @@ func NewStorage(url string) (*Storage, error) {
 }
 
 func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) error {
-	const op = "storage.postgreSQL.SaveURL"
+	const op = "storage.postgresql.SaveURL"
 	stmt, err := s.db.Prepare(`INSERT INTO url(alias, url, created_at) VALUES ($1, $2, $3)`)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
@@ -66,7 +66,7 @@ func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) e
 }
 
 func (s *Storage) GetURL(alias string) (string, error) {
-	const op = "storage.postgreSQL.GetURL"
+	const op = "storage.postgresql.GetURL"
 
 	stmt, err := s.db.Prepare(`SELECT url FROM url WHERE alias = $1`)
 	if err != nil {
@@ -87,7 +87,7 @@ func (s *Storage) GetURL(alias string) (string, error) {
 }
 
 func (s *Storage) DeleteURL(alias string) error {
-	const op = "storage.postgreSQL.DeleteURL"
+	const op = "storage.postgresql.DeleteURL"
 
 	stmt, err := s.db.Prepare(`DELETE FROM url WHERE alias = $1`)
 	if err != nil {

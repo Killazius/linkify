@@ -6,19 +6,19 @@ import (
 	"net/http"
 	"os"
 	"shorturl/internal/config"
-	"shorturl/internal/http-server/handlers/url/deleteAlias"
+	"shorturl/internal/http-server/handlers/url/delete"
 	"shorturl/internal/http-server/handlers/url/redirect"
 	"shorturl/internal/http-server/handlers/url/save"
 	customLogger "shorturl/internal/http-server/middleware/customLogger"
 	"shorturl/internal/lib/logger"
 	"shorturl/internal/lib/logger/sl"
-	"shorturl/internal/storage/postgreSQL"
+	"shorturl/internal/storage/postgresql"
 )
 
 func main() {
 	cfg := config.MustLoad()
 	log := logger.SetupLogger(cfg.Env)
-	storage, err := postgreSQL.NewStorage(cfg.StorageUrl)
+	storage, err := postgresql.NewStorage(cfg.StorageURL)
 	if err != nil {
 		log.Error("failed to initialize storage", sl.Err(err))
 		os.Exit(1)
@@ -32,7 +32,7 @@ func main() {
 
 	router.Post("/url", save.New(log, storage, cfg.AliasLength))
 	router.Get("/{alias}", redirect.New(log, storage))
-	router.Delete("/{alias}", deleteAlias.New(log, storage))
+	router.Delete("/{alias}", delete.New(log, storage))
 
 	server := http.Server{
 		Addr:         cfg.Address,

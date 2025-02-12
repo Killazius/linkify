@@ -53,7 +53,8 @@ func TestSaveHandler(t *testing.T) {
 			mockError: errors.New("unexpected error"),
 		},
 	}
-
+	const aliasLength = 6
+	t.Parallel()
 	for _, tc := range cases {
 		tc := tc
 
@@ -63,12 +64,11 @@ func TestSaveHandler(t *testing.T) {
 			urlSaverMock := mocks.NewURLSaver(t)
 
 			if tc.respError == "" || tc.mockError != nil {
-				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string")).
+				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
 					Return(tc.mockError).
 					Once()
 			}
-
-			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock)
+			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, aliasLength)
 
 			input := fmt.Sprintf(`{"url": "%s", "alias": "%s"}`, tc.url, tc.alias)
 
@@ -78,7 +78,7 @@ func TestSaveHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 
-			require.Equal(t, rr.Code, http.StatusOK)
+			require.Equal(t, http.StatusOK, rr.Code)
 
 			body := rr.Body.String()
 
