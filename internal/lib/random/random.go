@@ -3,21 +3,28 @@ package random
 import (
 	"math/rand"
 	"strings"
+	"sync"
 	"time"
 )
 
-//nolint:gosec // Weak random number generator is acceptable for non-cryptographic use cases.
-var rnd = rand.New(rand.NewSource(time.Now().UnixNano()))
-
 const alphabet = "123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
 
+var (
+	mu   sync.Mutex
+	seed = time.Now().UnixNano()
+)
+
 func NewRandomString(size int) string {
-	var (
-		builder strings.Builder
-	)
+	mu.Lock()
+	rnd := rand.New(rand.NewSource(seed))
+	seed++
+	mu.Unlock()
+
+	var builder strings.Builder
+	builder.Grow(size)
 
 	for i := 0; i < size; i++ {
-		builder.WriteString(string(alphabet[rnd.Intn(len(alphabet))]))
+		builder.WriteByte(alphabet[rnd.Intn(len(alphabet))])
 	}
 	return builder.String()
 }
