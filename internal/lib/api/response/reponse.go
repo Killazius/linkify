@@ -29,21 +29,21 @@ func OK() Response {
 	}
 }
 func ValidateError(errs validator.ValidationErrors) Response {
-	var ErrMsgs []string
+	var errMsgs []string
 
 	for _, err := range errs {
 		switch err.ActualTag() {
 		case "required":
-			ErrMsgs = append(ErrMsgs, fmt.Sprintf("field %s is required", err.Field()))
+			errMsgs = append(errMsgs, fmt.Sprintf("field %s is required", err.Field()))
 		case "url":
-			ErrMsgs = append(ErrMsgs, fmt.Sprintf("field %s is not valid URL"), err.Field())
+			errMsgs = append(errMsgs, fmt.Sprintf("field %s is not a valid URL", err.Field()))
 		default:
-			ErrMsgs = append(ErrMsgs, fmt.Sprintf("field %s is not valid", err.Field()))
+			errMsgs = append(errMsgs, fmt.Sprintf("field %s is not valid", err.Field()))
 		}
 	}
 	return Response{
 		Status: StatusError,
-		Error:  strings.Join(ErrMsgs, ","),
+		Error:  strings.Join(errMsgs, ","),
 	}
 
 }

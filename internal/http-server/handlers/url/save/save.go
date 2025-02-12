@@ -26,6 +26,7 @@ type Response struct {
 // TODO: move to config
 const aliasLength = 6
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLSaver
 type URLSaver interface {
 	SaveURL(urlToSave string, alias string) error
 }
@@ -34,7 +35,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.save.New"
 
-		log := log.With(
+		log = log.With(
 			slog.String("op", op),
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
@@ -51,7 +52,8 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 		log.Info("request body decoded", slog.Any("request", req))
 
 		if err = validator.New().Struct(req); err != nil {
-			validateErrs := err.(validator.ValidationErrors)
+			var validateErrs validator.ValidationErrors
+			errors.As(err, &validateErrs)
 
 			log.Error("failed to validate request", sl.Err(err))
 
