@@ -3,7 +3,8 @@ package save
 import (
 	"errors"
 	"github.com/go-chi/chi/v5/middleware"
-	render "github.com/go-chi/render"
+
+	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
@@ -11,6 +12,7 @@ import (
 	"shorturl/internal/lib/logger/sl"
 	"shorturl/internal/lib/random"
 	"shorturl/internal/storage"
+	"time"
 )
 
 type Request struct {
@@ -20,18 +22,16 @@ type Request struct {
 
 type Response struct {
 	resp.Response
-	Alias string `json:"alias"`
+	Alias     string    `json:"alias"`
+	CreatedAt time.Time `json:"created_at"`
 }
-
-// TODO: move to config
-const aliasLength = 6
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLSaver
 type URLSaver interface {
-	SaveURL(urlToSave string, alias string) error
+	SaveURL(urlToSave string, alias string, createdAt time.Time) error
 }
 
-func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
+func New(log *slog.Logger, urlSaver URLSaver, aliasLength int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.save.New"
 
@@ -66,7 +66,7 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 			alias = random.NewRandomString(aliasLength)
 		}
 
-		err = urlSaver.SaveURL(req.URL, alias)
+		err = urlSaver.SaveURL(req.URL, alias, time.Now())
 		if err != nil {
 			if errors.Is(err, storage.ErrURLExists) {
 				log.Info("url already exists", "url", req.URL)
@@ -81,13 +81,14 @@ func New(log *slog.Logger, urlSaver URLSaver) http.HandlerFunc {
 
 		log.Info("new URL added", "url", req.URL)
 
-		responseOK(w, r, alias)
+		responseOK(w, r, alias, time.Now())
 	}
 }
 
-func responseOK(w http.ResponseWriter, r *http.Request, alias string) {
+func responseOK(w http.ResponseWriter, r *http.Request, alias string, createdAt time.Time) {
 	render.JSON(w, r, Response{
-		Response: resp.OK(),
-		Alias:    alias,
+		Response:  resp.OK(),
+		Alias:     alias,
+		CreatedAt: createdAt,
 	})
 }

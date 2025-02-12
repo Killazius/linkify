@@ -10,7 +10,7 @@ import (
 func New(log *slog.Logger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		log := log.With(
-			slog.String("component", "middleware/customLcustom_logger"),
+			slog.String("component", "middleware/custom_logger"),
 		)
 
 		log.Info("customLogger middleware enabled")

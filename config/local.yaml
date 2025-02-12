@@ -1,5 +1,4 @@
 env: "local"
-storage_url: "postgres://postgres:postgres@localhost:5432/postgres"
 
 http_server:
   address: "localhost:8080"

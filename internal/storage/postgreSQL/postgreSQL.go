@@ -8,6 +8,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"shorturl/internal/storage"
+	"time"
 )
 
 type Storage struct {
@@ -20,10 +21,12 @@ func NewStorage(url string) (*Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	stmt, err := db.Prepare(`CREATE TABLE IF NOT EXISTS url(
-    	id SERIAL PRIMARY KEY,
-    	alias TEXT NOT NULL UNIQUE,
-    	url TEXT NOT NULL);`)
+	stmt, err := db.Prepare(`CREATE TABLE IF NOT EXISTS url (
+    id SERIAL PRIMARY KEY,
+    alias TEXT NOT NULL UNIQUE,
+    url TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+	);`)
 	if err != nil {
 		return nil, err
 	}
@@ -44,15 +47,14 @@ func NewStorage(url string) (*Storage, error) {
 	return &Storage{db: db}, nil
 }
 
-func (s *Storage) SaveURL(urlToSave string, alias string) error {
+func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) error {
 	const op = "storage.postgreSQL.SaveURL"
-
-	stmt, err := s.db.Prepare(`INSERT INTO url(alias, url) VALUES ($1, $2)`)
+	stmt, err := s.db.Prepare(`INSERT INTO url(alias, url, created_at) VALUES ($1, $2, $3)`)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
 	defer stmt.Close()
-	_, err = stmt.Exec(alias, urlToSave)
+	_, err = stmt.Exec(alias, urlToSave, createdAt)
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == "23505" {

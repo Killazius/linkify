@@ -23,7 +23,6 @@ func main() {
 		log.Error("failed to initialize storage", sl.Err(err))
 		os.Exit(1)
 	}
-	_ = storage
 
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
@@ -31,7 +30,7 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/url", save.New(log, storage))
+	router.Post("/url", save.New(log, storage, cfg.AliasLength))
 	router.Get("/{alias}", redirect.New(log, storage))
 	router.Delete("/{alias}", deleteAlias.New(log, storage))
 
