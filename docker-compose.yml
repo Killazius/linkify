@@ -7,8 +7,10 @@ services:
       CONFIG_PATH: "config/prod.yaml"
     depends_on:
       - postgres
+      - redis
     links:
       - postgres
+      - redis
 
   postgres:
     image: postgres:latest
@@ -20,6 +22,13 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   postgres_data:
+  redis_data:
