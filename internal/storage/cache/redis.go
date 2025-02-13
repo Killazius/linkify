@@ -54,6 +54,10 @@ func (s *Storage) Get(ctx context.Context, key string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("%s: %w", op, err)
 	}
+	err = s.client.Expire(ctx, key, 1*time.Hour).Err()
+	if err != nil {
+		return "", fmt.Errorf("%s: failed to extend key expiration: %w", op, err)
+	}
 	return res, nil
 }
 func (s *Storage) Delete(ctx context.Context, key string) error {

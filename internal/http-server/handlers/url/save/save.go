@@ -86,7 +86,7 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 		}
 
 		ctx := r.Context()
-		err = CacheSaver.Set(ctx, alias, req.URL, 0)
+		err = CacheSaver.Set(ctx, alias, req.URL, 1*time.Hour)
 		if err != nil {
 			if errors.Is(err, storage.ErrAliasExists) {
 				log.Info("alias already exists", "alias", alias)
