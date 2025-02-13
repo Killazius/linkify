@@ -1,6 +1,7 @@
 package redirect
 
 import (
+	"context"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -16,7 +17,11 @@ type URLGetter interface {
 	GetURL(alias string) (string, error)
 }
 
-func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
+type CacheGetter interface {
+	Get(ctx context.Context, key string) (string, error)
+}
+
+func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.redirect.New"
 
@@ -27,12 +32,18 @@ func New(log *slog.Logger, urlGetter URLGetter) http.HandlerFunc {
 		alias := chi.URLParam(r, "alias")
 		if alias == "" {
 			log.Info("alias is empty")
-
 			render.JSON(w, r, resp.Error("invalid request"))
-
 			return
 		}
-		url, err := urlGetter.GetURL(alias)
+		ctx := r.Context()
+		url, err := CacheGetter.Get(ctx, alias)
+		if err == nil {
+			log.Info("got url from cache", slog.String("url", url))
+			http.Redirect(w, r, url, http.StatusFound)
+			return
+		}
+
+		url, err = urlGetter.GetURL(alias)
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
 				log.Info("url not found")

@@ -1,6 +1,7 @@
 package save
 
 import (
+	"context"
 	"errors"
 	"github.com/go-chi/chi/v5/middleware"
 
@@ -31,7 +32,12 @@ type URLSaver interface {
 	SaveURL(urlToSave string, alias string, createdAt time.Time) error
 }
 
-func New(log *slog.Logger, urlSaver URLSaver, aliasLength int) http.HandlerFunc {
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheSaver
+type CacheSaver interface {
+	Set(ctx context.Context, key string, value string, expiration time.Duration) error
+}
+
+func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.save.New"
 
@@ -78,6 +84,19 @@ func New(log *slog.Logger, urlSaver URLSaver, aliasLength int) http.HandlerFunc 
 			render.JSON(w, r, resp.Error("failed to save url"))
 			return
 		}
+
+		ctx := r.Context()
+		err = CacheSaver.Set(ctx, alias, req.URL, 0)
+		if err != nil {
+			if errors.Is(err, storage.ErrAliasExists) {
+				log.Info("alias already exists", "alias", alias)
+				render.JSON(w, r, resp.Error("alias already exists"))
+				return
+			}
+			render.JSON(w, r, resp.Error("failed to save alias in cache"))
+			return
+		}
+		log.Info("url saved in cache", "alias", alias, "url", req.URL)
 
 		log.Info("new URL added", "url", req.URL)
 

@@ -13,6 +13,13 @@ type Config struct {
 	StorageURL  string `env:"STORAGE_URL" env-required:"true"`
 	AliasLength int    `yaml:"alias_length" env:"ALIAS_LENGTH" env-default:"6"`
 	HTTPServer  `yaml:"http_server"`
+	Redis       `yaml:"redis"`
+}
+
+type Redis struct {
+	Addr     string `env:"REDIS_ADDR" env-required:"true"`
+	Password string `env:"REDIS_PASSWORD" env-required:"true"`
+	DB       int    `env:"REDIS_DB" env-default:"0"`
 }
 
 type HTTPServer struct {
