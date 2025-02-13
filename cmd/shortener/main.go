@@ -12,6 +12,7 @@ import (
 	customLogger "shorturl/internal/http-server/middleware/customLogger"
 	"shorturl/internal/lib/logger"
 	"shorturl/internal/lib/logger/sl"
+	"shorturl/internal/storage/cache"
 	"shorturl/internal/storage/postgresql"
 )
 
@@ -23,16 +24,20 @@ func main() {
 		log.Error("failed to initialize storage", sl.Err(err))
 		os.Exit(1)
 	}
-
+	redis, err := cache.NewStorage(cfg.Addr, cfg.Password, cfg.DB)
+	if err != nil {
+		log.Error("failed to initialize cache", sl.Err(err))
+		os.Exit(1)
+	}
 	router := chi.NewRouter()
 	router.Use(middleware.RequestID)
 	router.Use(customLogger.New(log))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	router.Post("/url", save.New(log, storage, cfg.AliasLength))
-	router.Get("/{alias}", redirect.New(log, storage))
-	router.Delete("/{alias}", delete.New(log, storage))
+	router.Post("/url", save.New(log, storage, redis, cfg.AliasLength))
+	router.Get("/{alias}", redirect.New(log, storage, redis))
+	router.Delete("/{alias}", delete.New(log, storage, redis))
 
 	server := http.Server{
 		Addr:         cfg.Address,

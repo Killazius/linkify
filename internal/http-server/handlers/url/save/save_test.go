@@ -62,13 +62,20 @@ func TestSaveHandler(t *testing.T) {
 			t.Parallel()
 
 			urlSaverMock := mocks.NewURLSaver(t)
+			cacheSaverMock := mocks.NewCacheSaver(t)
 
 			if tc.respError == "" || tc.mockError != nil {
 				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
 					Return(tc.mockError).
 					Once()
+
+				if tc.mockError == nil {
+					cacheSaverMock.On("Set", mock.AnythingOfType("context.backgroundCtx"), mock.AnythingOfType("string"), tc.url, mock.AnythingOfType("time.Duration")).
+						Return(nil).
+						Once()
+				}
 			}
-			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, aliasLength)
+			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength)
 
 			input := fmt.Sprintf(`{"url": "%s", "alias": "%s"}`, tc.url, tc.alias)
 
