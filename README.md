@@ -57,7 +57,8 @@ http_server:
 - `make build` — сборка бинарного файла.
 - `make exec` — запуск бинарного файла.
 - `make clear` - очистка от бинарного файла.
-- `make run` — запуск docker-compose.
+- `make run` — сборка и запуск бинарного файла.
+- `make docker` - запуск docker-compose.
 - `make swag` — генерация документации для сервиса.
 - `make lint` - проверка кода на соответствие стандартам.
 - `make test` - запуск тестов.
