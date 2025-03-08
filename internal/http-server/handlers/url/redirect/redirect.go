@@ -21,6 +21,18 @@ type CacheGetter interface {
 	Get(ctx context.Context, key string) (string, error)
 }
 
+// New handles the redirect of a alias by its url.
+// @Summary      Redirect to URL by alias
+// @Description  Redirects to the original URL using the provided alias
+// @Tags         url
+// @Accept       json
+// @Produce      json
+// @Param        alias   path      string  true  "Alias of the URL to redirect"
+// @Success      302     "Found"  "Redirects to the original URL"
+// @Failure      400     {object}  response.Response  "Invalid request"
+// @Failure      404     {object}  response.Response  "Alias not found"
+// @Failure      500     {object}  response.Response  "Internal server error"
+// @Router       /{alias} [get]
 func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.redirect.New"
@@ -32,6 +44,7 @@ func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.Ha
 		alias := chi.URLParam(r, "alias")
 		if alias == "" {
 			log.Info("alias is empty")
+			w.WriteHeader(http.StatusBadRequest)
 			render.JSON(w, r, resp.Error("invalid request"))
 			return
 		}
@@ -47,10 +60,12 @@ func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.Ha
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
 				log.Info("url not found")
+				w.WriteHeader(http.StatusNotFound)
 				render.JSON(w, r, resp.Error("url not found"))
 				return
 			}
 			log.Error("failed to get url", sl.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, resp.Error("failed to get url"))
 			return
 		}

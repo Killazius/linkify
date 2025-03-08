@@ -1,0 +1,137 @@
+basePath: /
+definitions:
+  response.Response:
+    properties:
+      error:
+        type: string
+      status:
+        type: string
+    type: object
+  save.Request:
+    properties:
+      url:
+        type: string
+    required:
+    - url
+    type: object
+  save.Response:
+    description: Response contains the status, alias, and creation time of the saved
+      URL.
+    properties:
+      alias:
+        type: string
+      created_at:
+        type: string
+      error:
+        type: string
+      status:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    name: Telegram Developer
+    url: https://t.me/killazDev
+  description: Link shortening service.
+  license:
+    name: Apache 2.0
+    url: http://www.apache.org/licenses/LICENSE-2.0.html
+  title: Linkify
+  version: "1.2"
+paths:
+  /{alias}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete URL by alias
+      parameters:
+      - description: Alias of the URL to delete
+        in: path
+        name: alias
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "204":
+          description: No Content
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Alias not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Delete alias for URL
+      tags:
+      - url
+    get:
+      consumes:
+      - application/json
+      description: Redirects to the original URL using the provided alias
+      parameters:
+      - description: Alias of the URL to redirect
+        in: path
+        name: alias
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: Found"  "Redirects to the original URL
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "404":
+          description: Alias not found
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Redirect to URL by alias
+      tags:
+      - url
+  /url:
+    post:
+      consumes:
+      - application/json
+      description: Save alias by URL
+      parameters:
+      - description: Request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/save.Request'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: URL saved successfully
+          schema:
+            $ref: '#/definitions/save.Response'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/response.Response'
+        "409":
+          description: alias already exists
+          schema:
+            $ref: '#/definitions/response.Response'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/response.Response'
+      summary: Save URL for alias
+      tags:
+      - url
+swagger: "2.0"

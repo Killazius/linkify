@@ -9,7 +9,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"log/slog"
 	"net/http"
-	resp "shorturl/internal/lib/api/response"
+	"shorturl/internal/lib/api/response"
 	"shorturl/internal/lib/logger/sl"
 	"shorturl/internal/lib/random"
 	"shorturl/internal/storage"
@@ -17,13 +17,20 @@ import (
 )
 
 type Request struct {
-	URL   string `json:"url" validate:"required,url"`
-	Alias string `json:"alias,omitempty"`
+	URL string `json:"url" validate:"required,url"`
 }
 
+// Response represents the response structure for the save handler.
+// @Description Response contains the status, alias, and creation time of the saved URL.
 type Response struct {
-	resp.Response
-	Alias     string    `json:"alias"`
+	// Status is the response status.
+	// @Example success
+	// @Example error
+	// @json:inline
+	response.Response `swaggertype:"object,string"`
+
+	Alias string `json:"alias"`
+
 	CreatedAt time.Time `json:"created_at"`
 }
 
@@ -37,6 +44,18 @@ type CacheSaver interface {
 	Set(ctx context.Context, key string, value string, expiration time.Duration) error
 }
 
+// New handles the save of a URL by its alias.
+// @Summary      Save URL for alias
+// @Description  Save alias by URL
+// @Tags         url
+// @Accept       json
+// @Produce      json
+// @Param        request body Request true "Request body"
+// @Success      200  {object}  Response  "URL saved successfully"
+// @Failure      400  {object}  response.Response  "Invalid request"
+// @Failure      409  {object}  response.Response  "alias already exists"
+// @Failure      500  {object}  response.Response  "Internal server error"
+// @Router       /url [post]
 func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.save.New"
@@ -51,7 +70,8 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 		if err != nil {
 			log.Error("failed to decode request", sl.Err(err))
 
-			render.JSON(w, r, resp.Error("failed to decode request"))
+			w.WriteHeader(http.StatusBadRequest)
+			render.JSON(w, r, response.Error("failed to decode request"))
 			return
 		}
 
@@ -62,26 +82,22 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 			errors.As(err, &validateErrs)
 
 			log.Error("failed to validate request", sl.Err(err))
-
-			render.JSON(w, r, resp.ValidateError(validateErrs))
+			w.WriteHeader(http.StatusBadRequest)
+			render.JSON(w, r, response.ValidateError(validateErrs))
 			return
 		}
-		alias := req.Alias
-
-		if alias == "" {
-			alias = random.NewRandomString(aliasLength)
-		}
-
+		alias := random.NewRandomString(aliasLength)
 		err = urlSaver.SaveURL(req.URL, alias, time.Now())
 		if err != nil {
 			if errors.Is(err, storage.ErrURLExists) {
 				log.Info("url already exists", "url", req.URL)
-
-				render.JSON(w, r, resp.Error("url already exists"))
+				w.WriteHeader(http.StatusConflict)
+				render.JSON(w, r, response.Error("url already exists"))
 				return
 			}
 			log.Error("failed to save url", sl.Err(err))
-			render.JSON(w, r, resp.Error("failed to save url"))
+			w.WriteHeader(http.StatusInternalServerError)
+			render.JSON(w, r, response.Error("failed to save url"))
 			return
 		}
 
@@ -90,10 +106,10 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 		if err != nil {
 			if errors.Is(err, storage.ErrAliasExists) {
 				log.Info("alias already exists", "alias", alias)
-				render.JSON(w, r, resp.Error("alias already exists"))
+				render.JSON(w, r, response.Error("alias already exists"))
 				return
 			}
-			render.JSON(w, r, resp.Error("failed to save alias in cache"))
+			render.JSON(w, r, response.Error("failed to save alias in cache"))
 			return
 		}
 		log.Info("url saved in cache", "alias", alias, "url", req.URL)
@@ -106,7 +122,7 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 
 func responseOK(w http.ResponseWriter, r *http.Request, alias string, createdAt time.Time) {
 	render.JSON(w, r, Response{
-		Response:  resp.OK(),
+		Response:  response.OK(),
 		Alias:     alias,
 		CreatedAt: createdAt,
 	})

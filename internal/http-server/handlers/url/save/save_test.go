@@ -17,40 +17,35 @@ import (
 
 func TestSaveHandler(t *testing.T) {
 	cases := []struct {
-		name      string
-		alias     string
-		url       string
-		respError string
-		mockError error
+		name       string
+		url        string
+		respError  string
+		mockError  error
+		statusCode int
 	}{
 		{
-			name:  "Success",
-			alias: "test_alias",
-			url:   "https://google.com",
+			name:       "Success",
+			url:        "https://google.com",
+			statusCode: http.StatusOK,
 		},
 		{
-			name:  "Empty alias",
-			alias: "",
-			url:   "https://google.com",
+			name:       "Empty URL",
+			url:        "",
+			respError:  "field URL is required",
+			statusCode: http.StatusBadRequest,
 		},
 		{
-			name:      "Empty URL",
-			url:       "",
-			alias:     "some_alias",
-			respError: "field URL is required",
+			name:       "Invalid URL",
+			url:        "some invalid URL",
+			respError:  "field URL is not a valid URL",
+			statusCode: http.StatusBadRequest,
 		},
 		{
-			name:      "Invalid URL",
-			url:       "some invalid URL",
-			alias:     "some_alias",
-			respError: "field URL is not a valid URL",
-		},
-		{
-			name:      "SaveURL Error",
-			alias:     "test_alias",
-			url:       "https://google.com",
-			respError: "failed to save url",
-			mockError: errors.New("unexpected error"),
+			name:       "SaveURL Error",
+			url:        "https://google.com",
+			respError:  "failed to save url",
+			mockError:  errors.New("unexpected error"),
+			statusCode: http.StatusInternalServerError,
 		},
 	}
 	const aliasLength = 6
@@ -77,7 +72,7 @@ func TestSaveHandler(t *testing.T) {
 			}
 			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength)
 
-			input := fmt.Sprintf(`{"url": "%s", "alias": "%s"}`, tc.url, tc.alias)
+			input := fmt.Sprintf(`{"url": "%s"}`, tc.url)
 
 			req, err := http.NewRequest(http.MethodPost, "/save", bytes.NewReader([]byte(input)))
 			require.NoError(t, err)
@@ -85,7 +80,7 @@ func TestSaveHandler(t *testing.T) {
 			rr := httptest.NewRecorder()
 			handler.ServeHTTP(rr, req)
 
-			require.Equal(t, http.StatusOK, rr.Code)
+			require.Equal(t, tc.statusCode, rr.Code)
 
 			body := rr.Body.String()
 
