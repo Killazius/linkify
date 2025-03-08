@@ -9,8 +9,8 @@ RESTFUL API сервис для укорачивания ссылок.
 ## Технологии
 
 - [chi](https://github.com/go-chi/chi) - многофункциональный маршрутизатор для Go. 
-- [swagger](https://swagger.io/) - спецификация OpenAPI для HTTP-серверов.
-- [redis](https://redis.io/) - хранилище типа ключ-значение.
+- [swagger](https://github.com/swaggo/swag) - спецификация OpenAPI для HTTP-серверов.
+- [redis](https://github.com/redis/go-redis) - хранилище типа ключ-значение.
 - [gorm](https://gorm.io/) - ORM для Go.
 - [uber-automaxprocs](https://github.com/uber-go/automaxprocs) - установка максимального количества потоков.
 - [slog](https://pkg.go.dev/log/slog) - библиотека логирования.
