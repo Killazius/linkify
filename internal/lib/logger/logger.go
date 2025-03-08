@@ -1,9 +1,9 @@
 package logger
 
 import (
+	slogpretty "linkify/internal/lib/logger/handlers"
 	"log/slog"
 	"os"
-	slogpretty "shorturl/internal/lib/logger/handlers"
 )
 
 const (

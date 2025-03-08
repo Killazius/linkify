@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"shorturl/internal/storage"
+	"linkify/internal/storage"
 	"time"
 )
 
@@ -42,7 +42,7 @@ func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) e
 	result := s.db.Create(&url)
 	if result.Error != nil {
 		if errors.Is(result.Error, gorm.ErrDuplicatedKey) {
-			return storage.ErrURLExists
+			return storage.ErrAliasExists
 		}
 		return fmt.Errorf("%s: %w", op, result.Error)
 	}

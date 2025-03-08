@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"linkify/internal/http-server/handlers/url/save"
+	"linkify/internal/http-server/handlers/url/save/mocks"
+	"linkify/internal/lib/logger/handlers/slogdiscard"
 	"net/http"
 	"net/http/httptest"
-	"shorturl/internal/http-server/handlers/url/save"
-	"shorturl/internal/http-server/handlers/url/save/mocks"
-	"shorturl/internal/lib/logger/handlers/slogdiscard"
 	"testing"
+	"time"
 )
 
 func TestSaveHandler(t *testing.T) {
@@ -74,7 +75,7 @@ func TestSaveHandler(t *testing.T) {
 
 			input := fmt.Sprintf(`{"url": "%s"}`, tc.url)
 
-			req, err := http.NewRequest(http.MethodPost, "/save", bytes.NewReader([]byte(input)))
+			req, err := http.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(input)))
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
@@ -90,7 +91,16 @@ func TestSaveHandler(t *testing.T) {
 
 			require.Equal(t, tc.respError, resp.Error)
 
-			// TODO: add more checks
+			urlSaverMock.AssertExpectations(t)
+			cacheSaverMock.AssertExpectations(t)
+			if tc.respError == "" {
+				require.NotEmpty(t, resp.Alias)
+				require.Len(t, resp.Alias, aliasLength)
+				require.WithinDuration(t, time.Now(), resp.CreatedAt, time.Second)
+			} else {
+				require.Empty(t, resp.Alias)
+				require.True(t, resp.CreatedAt.IsZero())
+			}
 		})
 	}
 }

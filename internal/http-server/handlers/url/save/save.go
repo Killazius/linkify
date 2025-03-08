@@ -7,12 +7,12 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/go-playground/validator/v10"
+	"linkify/internal/lib/api/response"
+	"linkify/internal/lib/logger/sl"
+	"linkify/internal/lib/random"
+	"linkify/internal/storage"
 	"log/slog"
 	"net/http"
-	"shorturl/internal/lib/api/response"
-	"shorturl/internal/lib/logger/sl"
-	"shorturl/internal/lib/random"
-	"shorturl/internal/storage"
 	"time"
 )
 
@@ -53,7 +53,6 @@ type CacheSaver interface {
 // @Param        request body Request true "Request body"
 // @Success      200  {object}  Response  "URL saved successfully"
 // @Failure      400  {object}  response.Response  "Invalid request"
-// @Failure      409  {object}  response.Response  "alias already exists"
 // @Failure      500  {object}  response.Response  "Internal server error"
 // @Router       /url [post]
 func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int) http.HandlerFunc {
@@ -86,21 +85,32 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 			render.JSON(w, r, response.ValidateError(validateErrs))
 			return
 		}
-		alias := random.NewRandomString(aliasLength)
-		err = urlSaver.SaveURL(req.URL, alias, time.Now())
-		if err != nil {
-			if errors.Is(err, storage.ErrURLExists) {
-				log.Info("url already exists", "url", req.URL)
-				w.WriteHeader(http.StatusConflict)
-				render.JSON(w, r, response.Error("url already exists"))
+		now := time.Now()
+		maxAttempts := 5
+		var alias string
+		for attempt := 0; attempt < maxAttempts; attempt++ {
+			alias = random.NewRandomString(aliasLength)
+			err = urlSaver.SaveURL(req.URL, alias, now)
+			if err == nil {
+				break
+			}
+
+			if !errors.Is(err, storage.ErrAliasExists) {
+				log.Error("failed to save url", sl.Err(err))
+				w.WriteHeader(http.StatusInternalServerError)
+				render.JSON(w, r, response.Error("failed to save url"))
 				return
 			}
-			log.Error("failed to save url", sl.Err(err))
-			w.WriteHeader(http.StatusInternalServerError)
-			render.JSON(w, r, response.Error("failed to save url"))
-			return
+
+			log.Info("alias already exists, generating new one", "alias", alias)
 		}
 
+		if err != nil {
+			log.Error("failed to generate unique alias after multiple attempts", sl.Err(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			render.JSON(w, r, response.Error("failed to generate unique alias"))
+			return
+		}
 		ctx := r.Context()
 		err = CacheSaver.Set(ctx, alias, req.URL, 1*time.Hour)
 		if err != nil {

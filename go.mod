@@ -1,4 +1,4 @@
-module shorturl
+module linkify
 
 go 1.23.2
 

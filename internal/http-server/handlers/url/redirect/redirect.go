@@ -6,11 +6,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
+	resp "linkify/internal/lib/api/response"
+	"linkify/internal/lib/logger/sl"
+	"linkify/internal/storage"
 	"log/slog"
 	"net/http"
-	resp "shorturl/internal/lib/api/response"
-	"shorturl/internal/lib/logger/sl"
-	"shorturl/internal/storage"
 )
 
 type URLGetter interface {

@@ -5,18 +5,18 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 	_ "go.uber.org/automaxprocs"
+	_ "linkify/docs"
+	"linkify/internal/config"
+	"linkify/internal/http-server/handlers/url/delete"
+	"linkify/internal/http-server/handlers/url/redirect"
+	"linkify/internal/http-server/handlers/url/save"
+	customLogger "linkify/internal/http-server/middleware/customLogger"
+	"linkify/internal/lib/logger"
+	"linkify/internal/lib/logger/sl"
+	"linkify/internal/storage/cache"
+	"linkify/internal/storage/postgresql"
 	"net/http"
 	"os"
-	_ "shorturl/docs"
-	"shorturl/internal/config"
-	"shorturl/internal/http-server/handlers/url/delete"
-	"shorturl/internal/http-server/handlers/url/redirect"
-	"shorturl/internal/http-server/handlers/url/save"
-	customLogger "shorturl/internal/http-server/middleware/customLogger"
-	"shorturl/internal/lib/logger"
-	"shorturl/internal/lib/logger/sl"
-	"shorturl/internal/storage/cache"
-	"shorturl/internal/storage/postgresql"
 )
 
 // @title           Linkify
@@ -54,8 +54,8 @@ func main() {
 		httpSwagger.URL("http://localhost:8080/swagger/doc.json"),
 	))
 	router.Post("/url", save.New(log, storage, redis, cfg.AliasLength))
-	router.Get("/{alias}", redirect.New(log, storage, redis))
-	router.Delete("/{alias}", delete.New(log, storage, redis))
+	router.Get("/url/{alias}", redirect.New(log, storage, redis))
+	router.Delete("/url/{alias}", delete.New(log, storage, redis))
 	server := http.Server{
 		Addr:         cfg.Address,
 		Handler:      router,
