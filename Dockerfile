@@ -6,5 +6,5 @@ COPY go.mod go.sum ./
 RUN go mod download
 
 COPY . .
-RUN go build -o app ./cmd/shortener/
+RUN go build -o app ./cmd/linkify/
 CMD ["./app"]

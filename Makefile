@@ -1,4 +1,4 @@
-gBINARY_NAME=shortener
+BINARY_NAME=linkify
 
 build:
 	go build -o ${BINARY_NAME} cmd/${BINARY_NAME}/main.go

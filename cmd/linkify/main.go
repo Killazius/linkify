@@ -20,7 +20,7 @@ import (
 )
 
 // @title           Linkify
-// @version         1.2
+// @version         1.3
 // @description     Link shortening service.
 // @host            localhost:8080
 
