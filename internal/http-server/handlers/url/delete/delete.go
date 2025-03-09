@@ -13,10 +13,12 @@ import (
 	"net/http"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLDeleter
 type URLDeleter interface {
 	DeleteURL(alias string) error
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheDeleter
 type CacheDeleter interface {
 	Delete(ctx context.Context, key string) error
 }
