@@ -23,23 +23,29 @@ func TestSaveHandler(t *testing.T) {
 		respError  string
 		mockError  error
 		statusCode int
+		cacheError error
+		cacheURL   string
+		body       string
 	}{
 		{
 			name:       "Success",
 			url:        "https://google.com",
 			statusCode: http.StatusOK,
+			body:       fmt.Sprintf(`{"url": "%s"}`, "https://google.com"),
 		},
 		{
 			name:       "Empty URL",
 			url:        "",
 			respError:  "field URL is required",
 			statusCode: http.StatusBadRequest,
+			body:       fmt.Sprintf(`{"url": "%s"}`, ""),
 		},
 		{
 			name:       "Invalid URL",
 			url:        "some invalid URL",
 			respError:  "field URL is not a valid URL",
 			statusCode: http.StatusBadRequest,
+			body:       fmt.Sprintf(`{"url": "%s"}`, "some invalid URL"),
 		},
 		{
 			name:       "SaveURL Error",
@@ -47,6 +53,14 @@ func TestSaveHandler(t *testing.T) {
 			respError:  "failed to save url",
 			mockError:  errors.New("unexpected error"),
 			statusCode: http.StatusInternalServerError,
+			body:       fmt.Sprintf(`{"url": "%s"}`, "https://google.com"),
+		},
+		{
+			name:       "Invalid JSON",
+			url:        "",
+			respError:  "failed to decode request",
+			statusCode: http.StatusBadRequest,
+			body:       `{"url": "https://google.com"`,
 		},
 	}
 	const aliasLength = 6
@@ -73,9 +87,7 @@ func TestSaveHandler(t *testing.T) {
 			}
 			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength)
 
-			input := fmt.Sprintf(`{"url": "%s"}`, tc.url)
-
-			req, err := http.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(input)))
+			req, err := http.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(tc.body)))
 			require.NoError(t, err)
 
 			rr := httptest.NewRecorder()
