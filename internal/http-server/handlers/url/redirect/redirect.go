@@ -13,10 +13,12 @@ import (
 	"net/http"
 )
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLGetter
 type URLGetter interface {
 	GetURL(alias string) (string, error)
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheGetter
 type CacheGetter interface {
 	Get(ctx context.Context, key string) (string, error)
 }
@@ -33,7 +35,7 @@ type CacheGetter interface {
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
 // @Router       /{alias} [get]
-func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.HandlerFunc {
+func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.redirect.New"
 
@@ -41,6 +43,7 @@ func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.Ha
 			slog.String("op", op),
 			slog.String("request_id", middleware.GetReqID(r.Context())),
 		)
+
 		alias := chi.URLParam(r, "alias")
 		if alias == "" {
 			log.Info("alias is empty")
@@ -48,8 +51,10 @@ func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.Ha
 			render.JSON(w, r, resp.Error("invalid request"))
 			return
 		}
+
 		ctx := r.Context()
-		url, err := CacheGetter.Get(ctx, alias)
+
+		url, err := cacheGetter.Get(ctx, alias)
 		if err == nil {
 			log.Info("got url from cache", slog.String("url", url))
 			http.Redirect(w, r, url, http.StatusFound)
@@ -59,7 +64,7 @@ func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.Ha
 		url, err = urlGetter.GetURL(alias)
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
-				log.Info("url not found")
+				log.Info("url not found", slog.String("alias", alias))
 				w.WriteHeader(http.StatusNotFound)
 				render.JSON(w, r, resp.Error("url not found"))
 				return
@@ -71,7 +76,6 @@ func New(log *slog.Logger, urlGetter URLGetter, CacheGetter CacheGetter) http.Ha
 		}
 
 		log.Info("got url", slog.String("url", url))
-
 		http.Redirect(w, r, url, http.StatusFound)
 	}
 }
