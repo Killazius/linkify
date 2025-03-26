@@ -106,5 +106,5 @@ http_server:
 ```bash
 git clone https://github.com/killazius/linkify.git # клонирование репозитория
 cd shortener # переход в директорию проекта
-make run # запуск docker-compose
+make docker # запуск docker-compose
 ```
