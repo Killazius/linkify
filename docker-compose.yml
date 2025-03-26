@@ -1,7 +1,6 @@
 services:
   web:
     container_name: web
-    image: linkify:v1.3
     restart: always
     build: .
     ports:
