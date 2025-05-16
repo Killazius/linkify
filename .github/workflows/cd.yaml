@@ -22,11 +22,19 @@ jobs:
           key: "${{ secrets.SSH_KEY }}"
           known_hosts: "just-a-placeholder-so-we-dont-get-errors"
 
-      - name: Generate auth hosts
+      - name: Add server to known hosts
         run: ssh-keyscan -H ${{ vars.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - run: rsync --archive --compress --progress . ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PATH }}
+      - name: Copy files
+        run: rsync --archive --compress --progress . ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PATH }}
 
-      - name: run containers
 
-        run: cd ${{ vars.SERVER_PATH }} && make docker
+      - name: Run containers
+        run: |
+          ssh ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }} "
+            cd ${{ vars.SERVER_PATH }} && \
+            docker compose down && \
+            docker image prune -f && \
+            docker compose pull && \
+            docker compose up -d --build
+          "
