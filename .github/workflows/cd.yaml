@@ -26,3 +26,7 @@ jobs:
         run: ssh-keyscan -H ${{ vars.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - run: rsync --archive --compress --progress . ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PATH }}
+
+      - name: run containers
+
+        run: cd ${{ vars.SERVER_PATH }} && make docker
