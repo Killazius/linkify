@@ -9,6 +9,7 @@ on:
 
 jobs:
   deploy:
+    environment: env
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
@@ -22,6 +23,6 @@ jobs:
           known_hosts: "just-a-placeholder-so-we-dont-get-errors"
 
       - name: Generate auth hosts
-        run: ssh-keyscan -H ${{ env.SERVER_HOST }} >> ~/.ssh/known_hosts
+        run: ssh-keyscan -H ${{ vars.SERVER_HOST }} >> ~/.ssh/known_hosts
 
-      - run: rsync --archive --compress --progress . ${{ env.SERVER_USER }}@${{ env.SERVER_HOST }}:${{ env.SERVER_PATH }}
+      - run: rsync --archive --compress --progress . ${{ vars.SERVER_USER }}@${{ vars.SERVER_HOST }}:${{ vars.SERVER_PATH }}
