@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"linkify/internal/http-server/handlers/url/redirect"
-	"linkify/internal/http-server/handlers/url/redirect/mocks"
-	"linkify/internal/lib/logger/handlers/slogdiscard"
-	"linkify/internal/storage"
+	"linkify/shortener/internal/http-server/handlers/url/redirect"
+	mocks2 "linkify/shortener/internal/http-server/handlers/url/redirect/mocks"
+	"linkify/shortener/internal/lib/logger/handlers/slogdiscard"
+	"linkify/shortener/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -67,8 +66,8 @@ func TestRedirectHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			urlGetterMock := mocks.NewURLGetter(t)
-			cacheGetterMock := mocks.NewCacheGetter(t)
+			urlGetterMock := mocks2.NewURLGetter(t)
+			cacheGetterMock := mocks2.NewCacheGetter(t)
 
 			if tc.alias != "" {
 				cacheGetterMock.On("Get", mock.Anything, tc.alias).

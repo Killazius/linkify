@@ -2,7 +2,7 @@ package random_test
 
 import (
 	"github.com/stretchr/testify/assert"
-	"linkify/internal/lib/random"
+	"linkify/shortener/internal/lib/random"
 	"testing"
 )
 

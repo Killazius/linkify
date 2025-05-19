@@ -4,13 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	del "linkify/internal/http-server/handlers/url/delete"
-	"linkify/internal/http-server/handlers/url/delete/mocks"
-	"linkify/internal/lib/logger/handlers/slogdiscard"
-	"linkify/internal/storage"
+	del "linkify/shortener/internal/http-server/handlers/url/delete"
+	mocks2 "linkify/shortener/internal/http-server/handlers/url/delete/mocks"
+	"linkify/shortener/internal/lib/logger/handlers/slogdiscard"
+	"linkify/shortener/internal/storage"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -62,8 +61,8 @@ func TestDeleteHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			urlDeleterMock := mocks.NewURLDeleter(t)
-			cacheDeleterMock := mocks.NewCacheDeleter(t)
+			urlDeleterMock := mocks2.NewURLDeleter(t)
+			cacheDeleterMock := mocks2.NewCacheDeleter(t)
 
 			if tc.alias != "" {
 				urlDeleterMock.On("DeleteURL", tc.alias).Return(tc.mockError).Once()

@@ -5,7 +5,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
-	_ "go.uber.org/automaxprocs"
 	_ "linkify/docs"
 	"linkify/internal/config"
 	"linkify/internal/http-server/handlers/url/delete"
