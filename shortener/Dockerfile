@@ -10,6 +10,7 @@ RUN CGO_ENABLED=0 go build -o app ./cmd/linkify/
 FROM alpine:3.21
 WORKDIR /cmd
 COPY --from=builder /cmd/app .
-COPY --from=builder /cmd/config/prod.yaml .
+RUN mkdir -p /config
+COPY --from=builder /cmd/config/prod.yaml /config/
 COPY --from=builder /cmd/docs .
 CMD ["./app"]

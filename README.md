@@ -21,7 +21,7 @@ RESTFUL API сервис для укорачивания ссылок.
 
 1. Создайте файл `.env` на основе примера `.env.example`:
 ```env
-CONFIG_PATH = "config/<name>.yaml"
+CONFIG_PATH = "<name>.yaml"
 
 
 POSTGRES_USER="postgres_user"
@@ -34,14 +34,11 @@ ALIAS_LENGTH="6"
 
 REDIS_ADDR="redis:6379"
 REDIS_PASSWORD=""
-DB=0
-
-STORAGE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}"
-
+REDIS_DB=0
 ```
    Где `<name>` — название вашего конфигурационного файла. (по умолчанию config/config.yaml)
 
-2. Создайте конфигурационный файл по пути, указанному в `.env`. Пример содержимого конфигурационного файла:
+2. Создайте конфигурационный файл в папке config. Пример содержимого конфигурационного файла:
 ##### config/config.yaml
 ```yaml
 env: "local" # "local", "prod"
