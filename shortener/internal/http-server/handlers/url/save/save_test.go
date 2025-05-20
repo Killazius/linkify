@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"linkify/shortener/internal/http-server/handlers/url/save"
-	mocks2 "linkify/shortener/internal/http-server/handlers/url/save/mocks"
-	"linkify/shortener/internal/lib/logger/handlers/slogdiscard"
+	"linkify/internal/http-server/handlers/url/save"
+	mocker "linkify/internal/http-server/handlers/url/save/mocks"
+	"linkify/internal/lib/logger/handlers/slogdiscard"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -71,8 +71,8 @@ func TestSaveHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			urlSaverMock := mocks2.NewURLSaver(t)
-			cacheSaverMock := mocks2.NewCacheSaver(t)
+			urlSaverMock := mocker.NewURLSaver(t)
+			cacheSaverMock := mocker.NewCacheSaver(t)
 
 			if tc.respError == "" || tc.mockError != nil {
 				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).

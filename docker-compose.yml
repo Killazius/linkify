@@ -1,8 +1,16 @@
 services:
   web:
     container_name: web
-    restart: always
-    build: shortener
+    restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        delay: 5s
+    build:
+      context: shortener
+      dockerfile: Dockerfile
+    image: linkify-web:latest
     environment:
       CONFIG_PATH: ${CONFIG_PATH}
     depends_on:
