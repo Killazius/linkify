@@ -215,6 +215,8 @@ var SwaggerInfo = &swag.Spec{
 	Description:      "Link shortening service.",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
+	LeftDelim:        "{{",
+	RightDelim:       "}}",
 }
 
 func init() {
