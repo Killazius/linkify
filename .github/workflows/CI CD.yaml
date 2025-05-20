@@ -7,7 +7,7 @@ on:
     branches: ["master"]
 
 jobs:
-  test:
+  tests:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -39,30 +39,30 @@ jobs:
           profile: shortener/cover.out
 
   deploy:
-    needs: test
+    needs: tests
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
-    runs-on: ubuntu-latest
 
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
 
       - name: Install SSH Key
         uses: shimataro/ssh-key-action@v2.3.1
         with:
-          key: ${{ secrets.SSH_KEY }}
+          key: "${{ secrets.SSH_KEY }}"
           known_hosts: "just-a-placeholder-so-we-dont-get-errors"
 
       - name: Copy files
         run: rsync --archive --compress --progress . ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
 
+      - name: Stop containers
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose down"
+
       - name: Build new image
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose build web"
 
-      - name: Stop old containers
-        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose down"
+      - name: Cleanup images
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker image prune -f"
 
-      - name: Cleanup old images
-        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker rmi -f $(docker images --filter=reference='linkify-web*' -q) || true"
-
-      - name: Start new containers
-        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose up -d"
+      - name: Build and start
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose up -d --build"
