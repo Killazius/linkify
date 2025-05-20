@@ -1,0 +1,68 @@
+name: CI/CD
+
+on:
+  push:
+    branches: ["master"]
+  pull_request:
+    branches: ["master"]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+
+      - name: Download dependencies
+        working-directory: ./shortener
+        run: |
+          go mod download
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: ./shortener
+
+      - name: Test
+        working-directory: ./shortener
+        run: |
+          go test -v -race -parallel 5 -shuffle=on -coverprofile=./cover.out -covermode=atomic ./...
+
+      - name: Check coverage
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          profile: shortener/cover.out
+
+  deploy:
+    needs: test
+    if: github.ref == 'refs/heads/master' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install SSH Key
+        uses: shimataro/ssh-key-action@v2.3.1
+        with:
+          key: ${{ secrets.SSH_KEY }}
+          known_hosts: "just-a-placeholder-so-we-dont-get-errors"
+
+      - name: Copy files
+        run: rsync --archive --compress --progress . ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
+
+      - name: Build new image
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose build web"
+
+      - name: Stop old containers
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose down"
+
+      - name: Cleanup old images
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker rmi -f $(docker images --filter=reference='linkify-web*' -q) || true"
+
+      - name: Start new containers
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose up -d"

@@ -1,8 +1,8 @@
 package config
 
 import (
+	"fmt"
 	"github.com/ilyakaznacheev/cleanenv"
-	"github.com/joho/godotenv"
 	"log"
 	"os"
 	"time"
@@ -29,17 +29,16 @@ type HTTPServer struct {
 }
 
 func MustLoad() *Config {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatalf("Error loading .env file: %s", err)
-	}
 	configPath := os.Getenv("CONFIG_PATH")
 	if configPath == "" {
-		configPath = "config/config.yaml"
+		configPath = "config.yaml"
 	}
 
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		log.Fatalf("CONFIG_PATH does not exist: %s", configPath)
+	}
+	if err := os.Setenv("STORAGE_URL", buildPostgresURL()); err != nil {
+		log.Printf("failed to set STORAGE_URL: %v", err)
 	}
 
 	var cfg Config
@@ -47,4 +46,21 @@ func MustLoad() *Config {
 		log.Fatalf("Error loading config: %s", err)
 	}
 	return &cfg
+}
+
+func buildPostgresURL() string {
+	user := os.Getenv("POSTGRES_USER")
+	password := os.Getenv("POSTGRES_PASSWORD")
+	host := os.Getenv("POSTGRES_HOST")
+	if host == "" {
+		host = "postgres"
+	}
+	port := os.Getenv("POSTGRES_PORT")
+	if port == "" {
+		port = "5432"
+	}
+	db := os.Getenv("POSTGRES_DB")
+
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s",
+		user, password, host, port, db)
 }

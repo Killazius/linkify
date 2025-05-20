@@ -1,4 +1,4 @@
 .idea
-shortener/.env
+.env
 cover.out
 shortener/config/local.yaml
