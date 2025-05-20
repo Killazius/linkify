@@ -21,7 +21,7 @@ RESTFUL API сервис для укорачивания ссылок.
 
 1. Создайте файл `.env` на основе примера `.env.example`:
 ```env
-CONFIG_PATH = "<name>.yaml"
+CONFIG_PATH = "config/<name>.yaml"
 
 
 POSTGRES_USER="postgres_user"
