@@ -51,7 +51,7 @@ func main() {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 	router.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", cfg.Address)),
+		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", cfg.IP)),
 	))
 	router.Post("/url", save.New(log, storage, redis, cfg.AliasLength))
 	router.Get("/url/{alias}", redirect.New(log, storage, redis))

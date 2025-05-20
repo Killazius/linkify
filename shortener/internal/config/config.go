@@ -24,6 +24,7 @@ type Redis struct {
 
 type HTTPServer struct {
 	Address     string        `yaml:"address" env:"HTTP_ADDRESS" env-default:"8080"`
+	IP          string        `env:"SERVER_IP" env-default:"localhost"`
 	Timeout     time.Duration `yaml:"timeout" env:"HTTP_TIMEOUT" env-default:"4s"`
 	IdleTimeout time.Duration `yaml:"IdleTimeout" env:"HTTP_IDLE_TIMEOUT" env-default:"60s"`
 }
