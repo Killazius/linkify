@@ -52,6 +52,9 @@ jobs:
           key: "${{ secrets.SSH_KEY }}"
           known_hosts: "just-a-placeholder-so-we-dont-get-errors"
 
+      - name: Add server to known hosts
+        run: ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
+
       - name: Copy files
         run: rsync --archive --compress --progress . ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
 
