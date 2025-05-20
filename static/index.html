@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>URL Shortener</title>
+    <title>Linkify</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -23,6 +23,11 @@
             border: 1px solid #ddd;
             border-radius: 4px;
         }
+        .button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+        }
         button {
             background-color: #4CAF50;
             color: white;
@@ -31,9 +36,16 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
+            flex: 1;
         }
         button:hover {
             background-color: #45a049;
+        }
+        #docs-button {
+            background-color: #2196F3;
+        }
+        #docs-button:hover {
+            background-color: #0b7dda;
         }
         #result {
             margin-top: 20px;
@@ -55,12 +67,29 @@
         #short-url:hover {
             text-decoration: underline;
         }
+        h1 a {
+            color: #333;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+
+        h1 a:hover {
+            color: #4CAF50;
+            text-decoration: underline;
+        }
+
+        h1 a:visited {
+            color: #333;
+        }
     </style>
 </head>
 <body>
-<h1>URL Shortener</h1>
+<h1><a href="https://github.com/Killazius/linkify">Linkify</a></h1>
 <input type="text" id="url-input" placeholder="Enter your long URL here...">
-<button onclick="shortenUrl()">Shorten URL</button>
+<div class="button-container">
+    <button onclick="shortenUrl()">Shorten URL</button>
+    <button id="docs-button" onclick="window.location.href='/swagger'">API Documentation</button>
+</div>
 <div id="result"></div>
 <script>
     async function shortenUrl() {
