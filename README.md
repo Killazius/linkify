@@ -4,7 +4,7 @@ RESTFUL API сервис для укорачивания ссылок.
 Проект находится в разработке и находится в стадии тестирования. 
 Разработал [killazius](https://t.me/killazDev).
 
-##### Версия: v1.3
+##### Версия: v1.4
 
 ## Технологии
 
@@ -51,10 +51,6 @@ http_server:
 
 ## Использование Makefile
 В проекте предоставлен `Makefile` для упрощения сборки и запуска проекта. Доступные команды:
-- `make build` — сборка бинарного файла.
-- `make exec` — запуск бинарного файла.
-- `make clear` - очистка от бинарного файла.
-- `make run` — сборка и запуск бинарного файла.
 - `make docker` - запуск docker-compose.
 - `make swag` — генерация документации для сервиса.
 - `make lint` - проверка кода на соответствие стандартам.
@@ -82,10 +78,10 @@ http_server:
     "created_at": "2023-06-01T00:00:00Z"
 }
 ```
-- `GET /url/{alias}` - перенаправление по сохраненному URL.
+- `GET /{alias}` - перенаправление по сохраненному URL.
 
 **Пример запроса:**
-`curl http://localhost:8080/url/H2vga5`
+`curl http://localhost/H2vga5`
 
 **Пример ответа:**
 `302 Found`
@@ -93,7 +89,7 @@ http_server:
 - `DELETE /url/{alias}` - удаление сохраненного URL.
 **Пример запроса:**
 
-`curl http://localhost:8080/url/H2vga5`
+`curl http://localhost/url/H2vga5`
 
 **Пример ответа:**
 `204 No Content`
@@ -102,6 +98,5 @@ http_server:
 ## Запуск проекта
 ```bash
 git clone https://github.com/killazius/linkify.git # клонирование репозитория
-cd shortener # переход в директорию проекта
 make docker # запуск docker-compose
 ```

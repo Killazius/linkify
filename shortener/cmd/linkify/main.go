@@ -20,7 +20,7 @@ import (
 )
 
 // @title           Linkify
-// @version         1.3
+// @version         1.4
 // @description     Link shortening service.
 
 // @contact.name Telegram Developer
