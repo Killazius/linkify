@@ -117,7 +117,7 @@
             }
 
             const data = await response.json();
-            const fullShortUrl = `${window.location.origin}/url/${data.alias}`;
+            const fullShortUrl = `${window.location.origin}/${data.alias}`;
             resultDiv.className = 'success';
             resultDiv.innerHTML = `Short URL: <a href="${fullShortUrl}" id="short-url" target="_blank">${fullShortUrl}</a>`;
 

@@ -22,7 +22,6 @@ import (
 // @title           Linkify
 // @version         1.3
 // @description     Link shortening service.
-// @host            localhost:8080
 
 // @contact.name Telegram Developer
 // @contact.url https://t.me/killazDev
@@ -54,7 +53,7 @@ func main() {
 		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", cfg.IP)),
 	))
 	router.Post("/url", save.New(log, storage, redis, cfg.AliasLength))
-	router.Get("/url/{alias}", redirect.New(log, storage, redis))
+	router.Get("/{alias}", redirect.New(log, storage, redis))
 	router.Delete("/url/{alias}", delete.New(log, storage, redis))
 	server := http.Server{
 		Addr:         cfg.Address,
