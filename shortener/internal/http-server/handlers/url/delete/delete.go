@@ -8,7 +8,6 @@ import (
 	"github.com/go-chi/render"
 	resp "linkify/internal/lib/api/response"
 	"linkify/internal/lib/logger/sl"
-	"linkify/internal/metrics"
 	"linkify/internal/storage"
 	"log/slog"
 	"net/http"
@@ -24,6 +23,11 @@ type CacheDeleter interface {
 	Delete(ctx context.Context, key string) error
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=MetricsDeleter
+type MetricsDeleter interface {
+	IncLinksDeleted()
+}
+
 // New handles the deletion of a URL by its alias.
 // @Summary      Delete alias for URL
 // @Description  Delete URL by alias
@@ -36,7 +40,7 @@ type CacheDeleter interface {
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
 // @Router       /{alias} [delete]
-func New(log *slog.Logger, URLDeleter URLDeleter, CacheDeleter CacheDeleter, m *metrics.Collector) http.HandlerFunc {
+func New(log *slog.Logger, URLDeleter URLDeleter, CacheDeleter CacheDeleter, m MetricsDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.delete.New"
 
@@ -76,7 +80,7 @@ func New(log *slog.Logger, URLDeleter URLDeleter, CacheDeleter CacheDeleter, m *
 			return
 		}
 		log.Info("delete alias", slog.String("alias", alias))
-		m.LinksDeleted.Inc()
+		m.IncLinksDeleted()
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

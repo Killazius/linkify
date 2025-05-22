@@ -8,7 +8,6 @@ import (
 	"linkify/internal/lib/api/response"
 	"linkify/internal/lib/logger/sl"
 	"linkify/internal/lib/random"
-	"linkify/internal/metrics"
 	"linkify/internal/storage"
 
 	"github.com/go-chi/render"
@@ -45,6 +44,11 @@ type CacheSaver interface {
 	Set(ctx context.Context, key string, value string, expiration time.Duration) error
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=MetricsSaver
+type MetricsSaver interface {
+	IncLinksCreated()
+}
+
 // New handles the save of a URL by its alias.
 // @Summary      Save URL for alias
 // @Description  Save alias by URL
@@ -56,7 +60,7 @@ type CacheSaver interface {
 // @Failure      400  {object}  response.Response  "Invalid request"
 // @Failure      500  {object}  response.Response  "Internal server error"
 // @Router       /url [post]
-func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int, m *metrics.Collector) http.HandlerFunc {
+func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int, m MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.save.New"
 		log = log.With(
@@ -125,7 +129,7 @@ func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength
 		log.Info("url saved in cache", "alias", alias, "url", req.URL)
 
 		log.Info("new URL added", "url", req.URL)
-		m.LinksCreated.Inc()
+		m.IncLinksCreated()
 		responseOK(w, r, alias, time.Now())
 	}
 }

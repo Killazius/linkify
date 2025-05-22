@@ -64,7 +64,8 @@ func TestDeleteHandler(t *testing.T) {
 
 			urlDeleterMock := mocker.NewURLDeleter(t)
 			cacheDeleterMock := mocker.NewCacheDeleter(t)
-
+			metricsDeleterMock := mocker.NewMetricsDeleter(t)
+			metricsDeleterMock.On("IncLinksDeleted").Maybe()
 			if tc.alias != "" {
 				urlDeleterMock.On("DeleteURL", tc.alias).Return(tc.mockError).Once()
 
@@ -75,7 +76,7 @@ func TestDeleteHandler(t *testing.T) {
 				}
 			}
 
-			handler := del.New(slogdiscard.NewDiscardLogger(), urlDeleterMock, cacheDeleterMock)
+			handler := del.New(slogdiscard.NewDiscardLogger(), urlDeleterMock, cacheDeleterMock, metricsDeleterMock)
 			url := fmt.Sprintf("/url/%s", tc.alias)
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)

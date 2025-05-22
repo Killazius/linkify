@@ -69,7 +69,8 @@ func TestRedirectHandler(t *testing.T) {
 
 			urlGetterMock := mocker.NewURLGetter(t)
 			cacheGetterMock := mocker.NewCacheGetter(t)
-
+			metricsGetterMock := mocker.NewMetricsGetter(t)
+			metricsGetterMock.On("IncLinksRedirected").Maybe()
 			if tc.alias != "" {
 				cacheGetterMock.On("Get", mock.Anything, tc.alias).
 					Return(tc.cacheURL, tc.cacheError).
@@ -82,7 +83,7 @@ func TestRedirectHandler(t *testing.T) {
 				}
 			}
 
-			handler := redirect.New(slogdiscard.NewDiscardLogger(), urlGetterMock, cacheGetterMock)
+			handler := redirect.New(slogdiscard.NewDiscardLogger(), urlGetterMock, cacheGetterMock, metricsGetterMock)
 			url := fmt.Sprintf("/%s", tc.alias)
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)

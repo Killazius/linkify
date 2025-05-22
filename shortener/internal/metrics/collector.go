@@ -13,10 +13,10 @@ import (
 )
 
 type metrics struct {
-	LinksCreated        prometheus.Gauge
-	LinksRedirected     prometheus.Gauge
-	LinksDeleted        prometheus.Gauge
-	HTTPRequestDuration *prometheus.HistogramVec
+	linksCreated        prometheus.Gauge
+	linksRedirected     prometheus.Gauge
+	linksDeleted        prometheus.Gauge
+	httpRequestDuration *prometheus.HistogramVec
 }
 type Collector struct {
 	reg     *prometheus.Registry
@@ -28,19 +28,19 @@ type Collector struct {
 func New(address string) *Collector {
 	return &Collector{
 		metrics: metrics{
-			LinksCreated: prometheus.NewGauge(prometheus.GaugeOpts{
+			linksCreated: prometheus.NewGauge(prometheus.GaugeOpts{
 				Name: "url_shortener_links_created_total",
 				Help: "Total number of shortened links created",
 			}),
-			LinksRedirected: promauto.NewGauge(prometheus.GaugeOpts{
+			linksRedirected: promauto.NewGauge(prometheus.GaugeOpts{
 				Name: "url_shortener_links_redirected_total",
 				Help: "Total number of link redirects",
 			}),
-			LinksDeleted: promauto.NewGauge(prometheus.GaugeOpts{
+			linksDeleted: promauto.NewGauge(prometheus.GaugeOpts{
 				Name: "url_shortener_links_deleted_total",
 				Help: "Total number of link redirects",
 			}),
-			HTTPRequestDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
+			httpRequestDuration: prometheus.NewHistogramVec(prometheus.HistogramOpts{
 				Name:    "http_request_duration_seconds",
 				Help:    "Duration of HTTP requests",
 				Buckets: []float64{0.1, 0.3, 0.5, 1, 3, 5},
@@ -53,12 +53,27 @@ func New(address string) *Collector {
 
 func (c *Collector) Register() {
 	c.reg.MustRegister(
-		c.LinksCreated,
-		c.LinksDeleted,
-		c.HTTPRequestDuration,
-		c.LinksRedirected,
+		c.linksCreated,
+		c.linksDeleted,
+		c.httpRequestDuration,
+		c.linksRedirected,
 		collectors.NewGoCollector(),
 	)
+}
+func (c *Collector) IncLinksCreated() {
+	c.linksCreated.Inc()
+}
+
+func (c *Collector) IncLinksRedirected() {
+	c.linksRedirected.Inc()
+}
+
+func (c *Collector) IncLinksDeleted() {
+	c.linksDeleted.Inc()
+}
+
+func (c *Collector) ObserveHTTPRequestDuration(method, path, status string, duration float64) {
+	c.httpRequestDuration.WithLabelValues(method, path, status).Observe(duration)
 }
 
 type responseWriter struct {
@@ -78,7 +93,7 @@ func (c *Collector) Middleware(next http.Handler) http.Handler {
 		next.ServeHTTP(rw, r)
 
 		duration := time.Since(start).Seconds()
-		c.HTTPRequestDuration.WithLabelValues(
+		c.httpRequestDuration.WithLabelValues(
 			r.Method,
 			r.URL.Path,
 			http.StatusText(rw.status),
