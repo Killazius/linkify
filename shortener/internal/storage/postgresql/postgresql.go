@@ -1,6 +1,7 @@
 package postgresql
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"gorm.io/driver/postgres"
@@ -10,7 +11,8 @@ import (
 )
 
 type Storage struct {
-	db *gorm.DB
+	db   *gorm.DB
+	conn *sql.DB
 }
 type URL struct {
 	ID        uint      `gorm:"primaryKey"`
@@ -25,11 +27,19 @@ func NewStorage(url string) (*Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
+	conn, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("%s: failed to get database connection: %w", op, err)
+	}
+	conn.SetMaxOpenConns(25)
+	conn.SetMaxIdleConns(25)
+	conn.SetConnMaxLifetime(5 * time.Minute)
+
 	err = db.AutoMigrate(&URL{})
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
-	return &Storage{db: db}, nil
+	return &Storage{db: db, conn: conn}, nil
 }
 
 func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) error {
@@ -70,6 +80,16 @@ func (s *Storage) DeleteURL(alias string) error {
 	}
 	if result.RowsAffected == 0 {
 		return storage.ErrURLNotFound
+	}
+	return nil
+}
+
+func (s *Storage) Stop() error {
+	if s.conn != nil {
+		err := s.conn.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close database connection: %w", err)
+		}
 	}
 	return nil
 }

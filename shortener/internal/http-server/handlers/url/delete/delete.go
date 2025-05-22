@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/render"
 	resp "linkify/internal/lib/api/response"
 	"linkify/internal/lib/logger/sl"
+	"linkify/internal/metrics"
 	"linkify/internal/storage"
 	"log/slog"
 	"net/http"
@@ -35,7 +36,7 @@ type CacheDeleter interface {
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
 // @Router       /{alias} [delete]
-func New(log *slog.Logger, URLDeleter URLDeleter, CacheDeleter CacheDeleter) http.HandlerFunc {
+func New(log *slog.Logger, URLDeleter URLDeleter, CacheDeleter CacheDeleter, m *metrics.Collector) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.delete.New"
 
@@ -75,6 +76,7 @@ func New(log *slog.Logger, URLDeleter URLDeleter, CacheDeleter CacheDeleter) htt
 			return
 		}
 		log.Info("delete alias", slog.String("alias", alias))
+		m.LinksDeleted.Inc()
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

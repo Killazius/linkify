@@ -8,6 +8,7 @@ import (
 	"github.com/go-chi/render"
 	resp "linkify/internal/lib/api/response"
 	"linkify/internal/lib/logger/sl"
+	"linkify/internal/metrics"
 	"linkify/internal/storage"
 	"log/slog"
 	"net/http"
@@ -35,7 +36,7 @@ type CacheGetter interface {
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
 // @Router       /{alias} [get]
-func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.HandlerFunc {
+func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter, m *metrics.Collector) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.redirect.New"
 
@@ -57,6 +58,7 @@ func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.Ha
 		url, err := cacheGetter.Get(ctx, alias)
 		if err == nil {
 			log.Info("got url from cache", slog.String("url", url))
+			m.LinksRedirected.Inc()
 			http.Redirect(w, r, url, http.StatusFound)
 			return
 		}
@@ -76,6 +78,7 @@ func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.Ha
 		}
 
 		log.Info("got url", slog.String("url", url))
+		m.LinksRedirected.Inc()
 		http.Redirect(w, r, url, http.StatusFound)
 	}
 }
