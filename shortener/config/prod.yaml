@@ -1,6 +1,0 @@
-env: "prod"
-
-http_server:
-  address: "0.0.0.0:8080"
-  timeout: "4s"
-  idle_timeout: "60s"
