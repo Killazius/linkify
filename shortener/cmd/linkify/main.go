@@ -1,22 +1,19 @@
 package main
 
 import (
-	"fmt"
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
-	httpSwagger "github.com/swaggo/http-swagger"
+	"context"
 	_ "linkify/docs"
+	"linkify/internal/apiserver"
 	"linkify/internal/config"
-	"linkify/internal/http-server/handlers/url/delete"
-	"linkify/internal/http-server/handlers/url/redirect"
-	"linkify/internal/http-server/handlers/url/save"
-	customLogger "linkify/internal/http-server/middleware/customLogger"
 	"linkify/internal/lib/logger"
 	"linkify/internal/lib/logger/sl"
+	"linkify/internal/metrics"
 	"linkify/internal/storage/cache"
 	"linkify/internal/storage/postgresql"
-	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 )
 
 // @title           Linkify
@@ -39,34 +36,27 @@ func main() {
 		log.Error("failed to initialize storage", sl.Err(err))
 		os.Exit(1)
 	}
-	redis, err := cache.NewStorage(cfg.Addr, cfg.Password, cfg.DB)
+	redis, err := cache.NewStorage(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		log.Error("failed to initialize cache", sl.Err(err))
 		os.Exit(1)
 	}
-	router := chi.NewRouter()
-	router.Use(middleware.RequestID)
-	router.Use(customLogger.New(log))
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.URLFormat)
-	router.Get("/swagger/*", httpSwagger.Handler(
-		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", cfg.IP)),
-	))
-	router.Post("/url", save.New(log, storage, redis, cfg.AliasLength))
-	router.Get("/{alias}", redirect.New(log, storage, redis))
-	router.Delete("/url/{alias}", delete.New(log, storage, redis))
-	server := http.Server{
-		Addr:         cfg.Address,
-		Handler:      router,
-		ReadTimeout:  cfg.HTTPServer.Timeout,
-		WriteTimeout: cfg.HTTPServer.Timeout,
-		IdleTimeout:  cfg.HTTPServer.IdleTimeout,
-	}
+	metricsCollector := metrics.New(cfg.Prometheus, log)
+	srv := apiserver.New(cfg.HTTPServer, log, storage, redis, metricsCollector)
 
-	log.Info("starting server", "address", cfg.Address)
-	if err := server.ListenAndServe(); err != nil {
-		log.Error("failed to start server", sl.Err(err))
-	}
+	go srv.MustRun()
+	log.Info("starting server", "address", cfg.HTTPServer.Address)
+	go metricsCollector.MustRun(log)
+	log.Info("starting metricsCollector", "address", cfg.Prometheus.Address)
 
-	log.Error("server stopped")
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
+
+	<-stop
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	srv.Stop(ctx)
+	metricsCollector.Stop(ctx)
+	log.Info("server shutting down")
 }

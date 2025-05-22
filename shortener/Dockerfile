@@ -12,6 +12,6 @@ FROM alpine:3.21
 WORKDIR /cmd
 COPY --from=builder /cmd/app .
 RUN mkdir -p /config
-COPY --from=builder /cmd/config/prod.yaml ./config/
+COPY --from=builder /cmd/config/ ./config/
 COPY --from=builder /cmd/docs .
 CMD ["./app"]

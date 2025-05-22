@@ -68,3 +68,12 @@ func (s *Storage) Delete(ctx context.Context, key string) error {
 	}
 	return nil
 }
+func (s *Storage) Stop() error {
+	if s.client != nil {
+		err := s.client.Close()
+		if err != nil {
+			return fmt.Errorf("failed to close redis client: %w", err)
+		}
+	}
+	return nil
+}

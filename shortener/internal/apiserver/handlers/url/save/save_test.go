@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"linkify/internal/http-server/handlers/url/save"
-	mocker "linkify/internal/http-server/handlers/url/save/mocks"
+	"linkify/internal/apiserver/handlers/url/save"
+	mocker "linkify/internal/apiserver/handlers/url/save/mocks"
 	"linkify/internal/lib/logger/handlers/slogdiscard"
 	"net/http"
 	"net/http/httptest"
@@ -73,7 +73,8 @@ func TestSaveHandler(t *testing.T) {
 
 			urlSaverMock := mocker.NewURLSaver(t)
 			cacheSaverMock := mocker.NewCacheSaver(t)
-
+			metricsSaverMock := mocker.NewMetricsSaver(t)
+			metricsSaverMock.On("IncLinksCreated").Maybe()
 			if tc.respError == "" || tc.mockError != nil {
 				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
 					Return(tc.mockError).
@@ -85,7 +86,7 @@ func TestSaveHandler(t *testing.T) {
 						Once()
 				}
 			}
-			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength)
+			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength, metricsSaverMock)
 
 			req, err := http.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(tc.body)))
 			require.NoError(t, err)

@@ -1,0 +1,118 @@
+{
+  "annotations": {
+    "list": []
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Total Links Created",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 0, "y": 0},
+      "targets": [{
+        "expr": "url_shortener_links_created_total",
+        "legendFormat": "Created Links",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "title": "Total Redirects",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 8, "y": 0},
+      "targets": [{
+        "expr": "url_shortener_links_redirected_total",
+        "legendFormat": "Redirect Count",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "title": "Total Deleted",
+      "type": "stat",
+      "gridPos": {"h": 8, "w": 8, "x": 16, "y": 0},
+      "targets": [{
+        "expr": "url_shortener_links_deleted_total",
+        "legendFormat": "Deleted Count",
+        "refId": "A"
+      }],
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": ["lastNotNull"],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      }
+    },
+    {
+      "title": "Request Duration",
+      "type": "timeseries",
+      "gridPos": {"h": 8, "w": 24, "x": 0, "y": 8},
+      "targets": [
+        {
+          "expr": "avg(http_request_duration_seconds_sum / http_request_duration_seconds_count) by (method)",
+          "legendFormat": "Avg {{method}}",
+          "refId": "A"
+        },
+        {
+          "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, method))",
+          "legendFormat": "P95 {{method}}",
+          "refId": "B"
+        }
+      ],
+      "options": {
+        "legend": {
+          "calcs": [],
+          "displayMode": "list",
+          "placement": "bottom"
+        }
+      }
+    }
+  ],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-3h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Linkify",
+  "uid": "linkify-dashboard",
+  "version": 1,
+  "refresh": "30s"
+}

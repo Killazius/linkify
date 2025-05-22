@@ -23,6 +23,11 @@ type CacheGetter interface {
 	Get(ctx context.Context, key string) (string, error)
 }
 
+//go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=MetricsGetter
+type MetricsGetter interface {
+	IncLinksRedirected()
+}
+
 // New handles the redirect of a alias by its url.
 // @Summary      Redirect to URL by alias
 // @Description  Redirects to the original URL using the provided alias
@@ -35,7 +40,7 @@ type CacheGetter interface {
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
 // @Router       /{alias} [get]
-func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.HandlerFunc {
+func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter, m MetricsGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		const op = "handlers.url.redirect.New"
 
@@ -57,6 +62,7 @@ func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.Ha
 		url, err := cacheGetter.Get(ctx, alias)
 		if err == nil {
 			log.Info("got url from cache", slog.String("url", url))
+			m.IncLinksRedirected()
 			http.Redirect(w, r, url, http.StatusFound)
 			return
 		}
@@ -76,6 +82,7 @@ func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter) http.Ha
 		}
 
 		log.Info("got url", slog.String("url", url))
+		m.IncLinksRedirected()
 		http.Redirect(w, r, url, http.StatusFound)
 	}
 }
