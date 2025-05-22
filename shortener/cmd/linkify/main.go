@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	_ "linkify/docs"
+	"linkify/internal/apiserver"
 	"linkify/internal/config"
-	http_server "linkify/internal/http-server"
 	"linkify/internal/lib/logger"
 	"linkify/internal/lib/logger/sl"
 	"linkify/internal/metrics"
@@ -41,8 +41,8 @@ func main() {
 		log.Error("failed to initialize cache", sl.Err(err))
 		os.Exit(1)
 	}
-	metricsCollector := metrics.New(cfg.Prometheus.Address)
-	srv := http_server.New(cfg.HTTPServer, log, storage, redis, metricsCollector)
+	metricsCollector := metrics.New(cfg.Prometheus, log)
+	srv := apiserver.New(cfg.HTTPServer, log, storage, redis, metricsCollector)
 
 	go srv.MustRun()
 	log.Info("starting server", "address", cfg.HTTPServer.Address)

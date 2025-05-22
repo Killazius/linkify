@@ -30,7 +30,9 @@ type HTTPServer struct {
 	AliasLength int           `yaml:"alias_length"`
 }
 type Prometheus struct {
-	Address string `yaml:"address" env:"PROMETHEUS_ADDRESS" env-default:"8080"`
+	Address     string        `yaml:"address" env:"PROMETHEUS_ADDRESS" env-default:"8080"`
+	Timeout     time.Duration `yaml:"timeout" env-default:"4s"`
+	IdleTimeout time.Duration `yaml:"idle_timeout" env-default:"60s"`
 }
 
 func MustLoad() *Config {

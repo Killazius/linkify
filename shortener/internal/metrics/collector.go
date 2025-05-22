@@ -7,6 +7,8 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"linkify/internal/config"
+	"linkify/internal/lib/logger/sl"
 	"log/slog"
 	"net/http"
 	"time"
@@ -19,13 +21,14 @@ type metrics struct {
 	httpRequestDuration *prometheus.HistogramVec
 }
 type Collector struct {
-	reg     *prometheus.Registry
-	address string
-	srv     *http.Server
+	reg *prometheus.Registry
+	cfg config.Prometheus
+	srv *http.Server
+	log *slog.Logger
 	metrics
 }
 
-func New(address string) *Collector {
+func New(cfg config.Prometheus, log *slog.Logger) *Collector {
 	return &Collector{
 		metrics: metrics{
 			linksCreated: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -46,8 +49,9 @@ func New(address string) *Collector {
 				Buckets: []float64{0.1, 0.3, 0.5, 1, 3, 5},
 			}, []string{"method", "path", "status"}),
 		},
-		reg:     prometheus.NewRegistry(),
-		address: address,
+		reg: prometheus.NewRegistry(),
+		cfg: cfg,
+		log: log,
 	}
 }
 
@@ -113,8 +117,11 @@ func (c *Collector) Run() error {
 	mux.Handle("/metrics", promHandler)
 
 	srv := &http.Server{
-		Addr:    c.address,
-		Handler: mux,
+		Addr:         c.cfg.Address,
+		Handler:      mux,
+		ReadTimeout:  c.cfg.Timeout,
+		WriteTimeout: c.cfg.Timeout,
+		IdleTimeout:  c.cfg.IdleTimeout,
 	}
 	c.srv = srv
 	err := srv.ListenAndServe()
@@ -126,5 +133,6 @@ func (c *Collector) Run() error {
 
 func (c *Collector) Stop(ctx context.Context) {
 	if err := c.srv.Shutdown(ctx); err != nil {
+		c.log.Error("failed to stop metrics client", sl.Err(err))
 	}
 }

@@ -8,3 +8,5 @@ http_server:
 
 prometheus:
   address: "0.0.0.0:8083"
+  timeout: "4s"
+  idle_timeout: "60s"

@@ -1,4 +1,4 @@
-package http_server
+package apiserver
 
 import (
 	"context"
@@ -7,11 +7,11 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"linkify/internal/apiserver/handlers/url/delete"
+	"linkify/internal/apiserver/handlers/url/redirect"
+	"linkify/internal/apiserver/handlers/url/save"
+	customLogger "linkify/internal/apiserver/middleware/customLogger"
 	"linkify/internal/config"
-	"linkify/internal/http-server/handlers/url/delete"
-	"linkify/internal/http-server/handlers/url/redirect"
-	"linkify/internal/http-server/handlers/url/save"
-	customLogger "linkify/internal/http-server/middleware/customLogger"
 	"linkify/internal/lib/logger/sl"
 	"linkify/internal/metrics"
 	"linkify/internal/storage/cache"
@@ -64,7 +64,6 @@ func (s *Server) registerRoutes() {
 	s.router.Use(customLogger.New(s.log))
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.URLFormat)
-
 	s.router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.config.IP)),
 	))

@@ -1,4 +1,4 @@
-package redirect_test
+package delete_test
 
 import (
 	"context"
@@ -7,8 +7,8 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"linkify/internal/http-server/handlers/url/redirect"
-	mocker "linkify/internal/http-server/handlers/url/redirect/mocks"
+	del "linkify/internal/apiserver/handlers/url/delete"
+	mocker "linkify/internal/apiserver/handlers/url/delete/mocks"
 	"linkify/internal/lib/logger/handlers/slogdiscard"
 	"linkify/internal/storage"
 	"net/http"
@@ -16,20 +16,18 @@ import (
 	"testing"
 )
 
-func TestRedirectHandler(t *testing.T) {
+func TestDeleteHandler(t *testing.T) {
 	cases := []struct {
 		name       string
 		alias      string
 		mockError  error
 		cacheError error
-		cacheURL   string
 		statusCode int
 	}{
 		{
 			name:       "Success",
 			alias:      "alias",
-			cacheURL:   "http://example.com",
-			statusCode: http.StatusFound,
+			statusCode: http.StatusNoContent,
 		},
 		{
 			name:       "Empty alias",
@@ -40,23 +38,20 @@ func TestRedirectHandler(t *testing.T) {
 			name:       "Alias not found",
 			alias:      "non_existent_alias",
 			mockError:  storage.ErrURLNotFound,
-			cacheError: storage.ErrAliasNotFound,
 			statusCode: http.StatusNotFound,
 		},
 		{
-			name:       "GetURL error",
+			name:       "DeleteURL error",
 			alias:      "alias",
-			cacheError: errors.New("cache error"),
-			mockError:  errors.New("failed to get URL"),
+			mockError:  errors.New("failed to delete URL"),
 			statusCode: http.StatusInternalServerError,
 		},
 		{
-			name:       "Cache get error",
+			name:       "Cache deletion error",
 			alias:      "alias",
 			mockError:  nil,
 			cacheError: errors.New("cache error"),
-			cacheURL:   "http://example.com",
-			statusCode: http.StatusFound,
+			statusCode: http.StatusInternalServerError,
 		},
 	}
 
@@ -67,25 +62,23 @@ func TestRedirectHandler(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
 
-			urlGetterMock := mocker.NewURLGetter(t)
-			cacheGetterMock := mocker.NewCacheGetter(t)
-			metricsGetterMock := mocker.NewMetricsGetter(t)
-			metricsGetterMock.On("IncLinksRedirected").Maybe()
+			urlDeleterMock := mocker.NewURLDeleter(t)
+			cacheDeleterMock := mocker.NewCacheDeleter(t)
+			metricsDeleterMock := mocker.NewMetricsDeleter(t)
+			metricsDeleterMock.On("IncLinksDeleted").Maybe()
 			if tc.alias != "" {
-				cacheGetterMock.On("Get", mock.Anything, tc.alias).
-					Return(tc.cacheURL, tc.cacheError).
-					Once()
+				urlDeleterMock.On("DeleteURL", tc.alias).Return(tc.mockError).Once()
 
-				if tc.cacheError != nil || tc.cacheURL == "" {
-					urlGetterMock.On("GetURL", tc.alias).
-						Return(tc.cacheURL, tc.mockError).
+				if tc.mockError == nil {
+					cacheDeleterMock.On("Delete", mock.Anything, tc.alias).
+						Return(tc.cacheError).
 						Once()
 				}
 			}
 
-			handler := redirect.New(slogdiscard.NewDiscardLogger(), urlGetterMock, cacheGetterMock, metricsGetterMock)
-			url := fmt.Sprintf("/%s", tc.alias)
-			req, err := http.NewRequest(http.MethodGet, url, nil)
+			handler := del.New(slogdiscard.NewDiscardLogger(), urlDeleterMock, cacheDeleterMock, metricsDeleterMock)
+			url := fmt.Sprintf("/url/%s", tc.alias)
+			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)
 
 			rctx := chi.NewRouteContext()
@@ -97,8 +90,8 @@ func TestRedirectHandler(t *testing.T) {
 
 			require.Equal(t, tc.statusCode, rr.Code)
 
-			urlGetterMock.AssertExpectations(t)
-			cacheGetterMock.AssertExpectations(t)
+			urlDeleterMock.AssertExpectations(t)
+			cacheDeleterMock.AssertExpectations(t)
 		})
 	}
 }
