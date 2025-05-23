@@ -71,4 +71,4 @@ jobs:
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker image prune -f"
 
       - name: Build and start
-        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose up"
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose up -d"
