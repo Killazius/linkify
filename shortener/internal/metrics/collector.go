@@ -115,7 +115,7 @@ func (c *Collector) Run() error {
 	mux := http.NewServeMux()
 	promHandler := promhttp.HandlerFor(c.reg, promhttp.HandlerOpts{Registry: c.reg})
 	mux.Handle("/metrics", promHandler)
-
+	c.Register()
 	srv := &http.Server{
 		Addr:         c.cfg.Address,
 		Handler:      mux,
