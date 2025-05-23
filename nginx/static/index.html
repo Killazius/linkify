@@ -118,8 +118,10 @@
 
             const data = await response.json();
             const fullShortUrl = `${window.location.origin}/${data.alias}`;
+            const displayUrl = fullShortUrl.replace(/^https?:\/\//, '');
+
             resultDiv.className = 'success';
-            resultDiv.innerHTML = `Short URL: <a href="${fullShortUrl}" id="short-url" target="_blank">${fullShortUrl}</a>`;
+            resultDiv.innerHTML = `Short URL: <a href="${fullShortUrl}" id="short-url" target="_blank">${displayUrl}</a>`;
 
         } catch (error) {
             resultDiv.className = 'error';
