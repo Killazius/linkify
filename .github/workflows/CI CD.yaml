@@ -29,7 +29,7 @@ jobs:
         with:
           version: latest
           working-directory: ./shortener
-          args: --out-format=tab --skip-dirs-use-default
+          args: --out-format=tab
           skip-cache: true
           skip-pkg-cache: true
           skip-build-cache: true
