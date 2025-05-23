@@ -16,10 +16,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version: 'stable'
+          cache: false
 
       - name: Download dependencies
         working-directory: ./shortener
         run: |
+          go mod tidy
           go mod download
 
       - name: Lint
@@ -27,7 +29,8 @@ jobs:
         with:
           version: latest
           working-directory: ./shortener
-          args: --out-format=tab
+          args: --out-format=tab --skip-dirs-use-default
+          skip-cache: true
           skip-pkg-cache: true
           skip-build-cache: true
 
