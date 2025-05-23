@@ -62,7 +62,7 @@ jobs:
         run: ssh-keyscan -H ${{ secrets.SERVER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Copy files
-        run: rsync --archive --compress --progress . ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
+        run: rsync --archive --compress --progress --exclude='.env.example' --exclude='.gitignore' --exclude='README.md' --exclude='.github/' . ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }}:${{ secrets.SERVER_PATH }}
 
       - name: Stop containers
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose down"
