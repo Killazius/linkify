@@ -14,7 +14,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLGetter
 type URLGetter interface {
-	GetURL(alias string) (string, error)
+	Get(alias string) (string, error)
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheGetter
@@ -61,7 +61,7 @@ func New(log *zap.SugaredLogger, urlGetter URLGetter, cacheGetter CacheGetter, m
 			return
 		}
 
-		url, err = urlGetter.GetURL(alias)
+		url, err = urlGetter.Get(alias)
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
 				log.Infow("url not found", "alias", alias)

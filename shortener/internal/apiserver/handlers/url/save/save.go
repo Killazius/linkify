@@ -35,7 +35,7 @@ type Response struct {
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLSaver
 type URLSaver interface {
-	SaveURL(urlToSave string, alias string, createdAt time.Time) error
+	Save(urlToSave string, alias string, createdAt time.Time) error
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheSaver
@@ -112,7 +112,7 @@ func generateUniqueAlias(log *zap.SugaredLogger, saver URLSaver, url string, len
 
 	for attempt := 0; attempt < maxAttempts; attempt++ {
 		alias := random.NewRandomString(length)
-		err := saver.SaveURL(url, alias, createdAt)
+		err := saver.Save(url, alias, createdAt)
 		if err == nil {
 			return alias, nil
 		}

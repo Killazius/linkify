@@ -35,16 +35,16 @@ func main() {
 	if err != nil || log == nil {
 		os.Exit(1)
 	}
-	storage, err := postgresql.NewStorage(cfg.StorageURL)
+	repo, err := postgresql.New(cfg.StorageURL)
 	if err != nil {
 		log.Fatal("failed to initialize storage", zap.Error(err))
 	}
-	redis, err := cache.NewStorage(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DB)
+	redisCache, err := cache.New(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
 		log.Fatal("failed to initialize cache", zap.Error(err))
 	}
 	metricsCollector := metrics.New(cfg.Prometheus, log)
-	srv := apiserver.New(cfg.HTTPServer, log, storage, redis, metricsCollector)
+	srv := apiserver.New(cfg.HTTPServer, log, repo, redisCache, metricsCollector)
 
 	go srv.MustRun()
 	log.Infow("starting server", "address", cfg.HTTPServer.Address)

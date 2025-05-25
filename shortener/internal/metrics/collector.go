@@ -10,7 +10,6 @@ import (
 	"go.uber.org/zap"
 	"linkify/internal/config"
 	"net/http"
-	"time"
 )
 
 type metrics struct {
@@ -79,30 +78,6 @@ func (c *Collector) ObserveHTTPRequestDuration(method, path, status string, dura
 	c.httpRequestDuration.WithLabelValues(method, path, status).Observe(duration)
 }
 
-type responseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.status = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (c *Collector) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		rw := &responseWriter{w, http.StatusOK}
-		next.ServeHTTP(rw, r)
-
-		duration := time.Since(start).Seconds()
-		c.httpRequestDuration.WithLabelValues(
-			r.Method,
-			r.URL.Path,
-			http.StatusText(rw.status),
-		).Observe(duration)
-	})
-}
 func (c *Collector) MustRun() {
 	if err := c.Run(); err != nil {
 		c.log.Error("failed to run collector", zap.Error(err))

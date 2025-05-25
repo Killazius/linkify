@@ -48,7 +48,7 @@ func TestSaveHandler(t *testing.T) {
 			body:       fmt.Sprintf(`{"url": "%s"}`, "some invalid URL"),
 		},
 		{
-			name:       "SaveURL Error",
+			name:       "Save Error",
 			url:        "https://google.com",
 			respError:  "failed to save url",
 			mockError:  errors.New("unexpected error"),
@@ -76,7 +76,7 @@ func TestSaveHandler(t *testing.T) {
 			metricsSaverMock := mocker.NewMetricsSaver(t)
 			metricsSaverMock.On("IncLinksCreated").Maybe()
 			if tc.respError == "" || tc.mockError != nil {
-				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
+				urlSaverMock.On("Save", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
 					Return(tc.mockError).
 					Once()
 

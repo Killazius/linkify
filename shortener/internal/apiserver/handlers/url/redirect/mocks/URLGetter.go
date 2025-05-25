@@ -9,12 +9,12 @@ type URLGetter struct {
 	mock.Mock
 }
 
-// GetURL provides a mock function with given fields: alias
-func (_m *URLGetter) GetURL(alias string) (string, error) {
+// Get provides a mock function with given fields: alias
+func (_m *URLGetter) Get(alias string) (string, error) {
 	ret := _m.Called(alias)
 
 	if len(ret) == 0 {
-		panic("no return value specified for GetURL")
+		panic("no return value specified for Get")
 	}
 
 	var r0 string

@@ -44,7 +44,7 @@ func TestRedirectHandler(t *testing.T) {
 			statusCode: http.StatusNotFound,
 		},
 		{
-			name:       "GetURL error",
+			name:       "Get error",
 			alias:      "alias",
 			cacheError: errors.New("cache error"),
 			mockError:  errors.New("failed to get URL"),
@@ -77,7 +77,7 @@ func TestRedirectHandler(t *testing.T) {
 					Once()
 
 				if tc.cacheError != nil || tc.cacheURL == "" {
-					urlGetterMock.On("GetURL", tc.alias).
+					urlGetterMock.On("Get", tc.alias).
 						Return(tc.cacheURL, tc.mockError).
 						Once()
 				}

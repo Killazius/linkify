@@ -8,19 +8,13 @@ import (
 )
 
 func New(log *zap.SugaredLogger) func(next http.Handler) http.Handler {
-	logger := log.With(
-		"component", "middleware/custom_logger",
-	)
-
-	logger.Info("customLogger middleware enabled")
 
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			entry := logger.With(
+			entry := log.With(
 				"method", r.Method,
 				"path", r.URL.Path,
 				"remote_addr", r.RemoteAddr,
-				"user_agent", r.UserAgent(),
 				"request_id", middleware.GetReqID(r.Context()),
 			)
 

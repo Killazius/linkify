@@ -21,8 +21,8 @@ type URL struct {
 	CreatedAt time.Time `gorm:"not null;default:now()"`
 }
 
-func NewStorage(url string) (*Storage, error) {
-	const op = "storage.postgresql.NewStorage"
+func New(url string) (*Storage, error) {
+	const op = "storage.postgresql.New"
 	db, err := gorm.Open(postgres.Open(url), &gorm.Config{}) //sql.Open("pgx", url)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
@@ -42,8 +42,8 @@ func NewStorage(url string) (*Storage, error) {
 	return &Storage{db: db, conn: conn}, nil
 }
 
-func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) error {
-	const op = "storage.postgresql.SaveURL"
+func (s *Storage) Save(urlToSave string, alias string, createdAt time.Time) error {
+	const op = "storage.postgresql.Save"
 	url := URL{
 		Alias:     alias,
 		URL:       urlToSave,
@@ -59,8 +59,8 @@ func (s *Storage) SaveURL(urlToSave string, alias string, createdAt time.Time) e
 	return nil
 }
 
-func (s *Storage) GetURL(alias string) (string, error) {
-	const op = "storage.postgresql.GetURL"
+func (s *Storage) Get(alias string) (string, error) {
+	const op = "storage.postgresql.Get"
 	var url URL
 	result := s.db.Where("alias = ?", alias).First(&url)
 	if result.Error != nil {
@@ -72,8 +72,8 @@ func (s *Storage) GetURL(alias string) (string, error) {
 	return url.URL, nil
 }
 
-func (s *Storage) DeleteURL(alias string) error {
-	const op = "storage.postgresql.DeleteURL"
+func (s *Storage) Delete(alias string) error {
+	const op = "storage.postgresql.Delete"
 	result := s.db.Where("alias = ?", alias).Delete(&URL{})
 	if result.Error != nil {
 		return fmt.Errorf("%s: %w", op, result.Error)

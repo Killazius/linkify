@@ -14,7 +14,7 @@ import (
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLDeleter
 type URLDeleter interface {
-	DeleteURL(alias string) error
+	Delete(alias string) error
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheDeleter
@@ -55,7 +55,7 @@ func New(log *zap.SugaredLogger, URLDeleter URLDeleter, CacheDeleter CacheDelete
 		if err != nil {
 			log.Error("failed to delete alias from cache", zap.Error(err))
 		}
-		err = URLDeleter.DeleteURL(alias)
+		err = URLDeleter.Delete(alias)
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
 				log.Infow("alias not found", "alias", alias)
