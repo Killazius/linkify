@@ -7,11 +7,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus/collectors"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 	"linkify/internal/config"
-	"linkify/internal/lib/logger/sl"
-	"log/slog"
 	"net/http"
-	"time"
 )
 
 type metrics struct {
@@ -24,11 +22,11 @@ type Collector struct {
 	reg *prometheus.Registry
 	cfg config.Prometheus
 	srv *http.Server
-	log *slog.Logger
+	log *zap.SugaredLogger
 	metrics
 }
 
-func New(cfg config.Prometheus, log *slog.Logger) *Collector {
+func New(cfg config.Prometheus, log *zap.SugaredLogger) *Collector {
 	return &Collector{
 		metrics: metrics{
 			linksCreated: prometheus.NewGauge(prometheus.GaugeOpts{
@@ -80,33 +78,9 @@ func (c *Collector) ObserveHTTPRequestDuration(method, path, status string, dura
 	c.httpRequestDuration.WithLabelValues(method, path, status).Observe(duration)
 }
 
-type responseWriter struct {
-	http.ResponseWriter
-	status int
-}
-
-func (rw *responseWriter) WriteHeader(code int) {
-	rw.status = code
-	rw.ResponseWriter.WriteHeader(code)
-}
-
-func (c *Collector) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
-		rw := &responseWriter{w, http.StatusOK}
-		next.ServeHTTP(rw, r)
-
-		duration := time.Since(start).Seconds()
-		c.httpRequestDuration.WithLabelValues(
-			r.Method,
-			r.URL.Path,
-			http.StatusText(rw.status),
-		).Observe(duration)
-	})
-}
-func (c *Collector) MustRun(log *slog.Logger) {
+func (c *Collector) MustRun() {
 	if err := c.Run(); err != nil {
-		log.Error(err.Error())
+		c.log.Error("failed to run collector", zap.Error(err))
 	}
 
 }
@@ -133,6 +107,6 @@ func (c *Collector) Run() error {
 
 func (c *Collector) Stop(ctx context.Context) {
 	if err := c.srv.Shutdown(ctx); err != nil {
-		c.log.Error("failed to stop metrics client", sl.Err(err))
+		c.log.Error("failed to stop metrics client", zap.Error(err))
 	}
 }

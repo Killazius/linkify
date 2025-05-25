@@ -9,12 +9,12 @@ type URLDeleter struct {
 	mock.Mock
 }
 
-// DeleteURL provides a mock function with given fields: alias
-func (_m *URLDeleter) DeleteURL(alias string) error {
+// Delete provides a mock function with given fields: alias
+func (_m *URLDeleter) Delete(alias string) error {
 	ret := _m.Called(alias)
 
 	if len(ret) == 0 {
-		panic("no return value specified for DeleteURL")
+		panic("no return value specified for Delete")
 	}
 
 	var r0 error

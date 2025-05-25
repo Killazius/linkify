@@ -6,16 +6,15 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/render"
+	"go.uber.org/zap"
 	resp "linkify/internal/lib/api/response"
-	"linkify/internal/lib/logger/sl"
 	"linkify/internal/storage"
-	"log/slog"
 	"net/http"
 )
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=URLGetter
 type URLGetter interface {
-	GetURL(alias string) (string, error)
+	Get(alias string) (string, error)
 }
 
 //go:generate go run github.com/vektra/mockery/v2@v2.50.2 --name=CacheGetter
@@ -40,13 +39,10 @@ type MetricsGetter interface {
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
 // @Router       /{alias} [get]
-func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter, m MetricsGetter) http.HandlerFunc {
+func New(log *zap.SugaredLogger, urlGetter URLGetter, cacheGetter CacheGetter, m MetricsGetter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.url.redirect.New"
-
-		log = log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
+		log := log.With(
+			"request_id", middleware.GetReqID(r.Context()),
 		)
 
 		alias := chi.URLParam(r, "alias")
@@ -57,31 +53,29 @@ func New(log *slog.Logger, urlGetter URLGetter, cacheGetter CacheGetter, m Metri
 			return
 		}
 
-		ctx := r.Context()
-
-		url, err := cacheGetter.Get(ctx, alias)
+		url, err := cacheGetter.Get(r.Context(), alias)
 		if err == nil {
-			log.Info("got url from cache", slog.String("url", url))
+			log.Infow("got url from cache", "url", url)
 			m.IncLinksRedirected()
 			http.Redirect(w, r, url, http.StatusFound)
 			return
 		}
 
-		url, err = urlGetter.GetURL(alias)
+		url, err = urlGetter.Get(alias)
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
-				log.Info("url not found", slog.String("alias", alias))
+				log.Infow("url not found", "alias", alias)
 				w.WriteHeader(http.StatusNotFound)
 				render.JSON(w, r, resp.Error("url not found"))
 				return
 			}
-			log.Error("failed to get url", sl.Err(err))
+			log.Error("failed to get url", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, resp.Error("failed to get url"))
 			return
 		}
 
-		log.Info("got url", slog.String("url", url))
+		log.Infow("got url", "url", url)
 		m.IncLinksRedirected()
 		http.Redirect(w, r, url, http.StatusFound)
 	}

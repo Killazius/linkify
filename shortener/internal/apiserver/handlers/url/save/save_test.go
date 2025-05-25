@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"linkify/internal/apiserver/handlers/url/save"
 	mocker "linkify/internal/apiserver/handlers/url/save/mocks"
-	"linkify/internal/lib/logger/handlers/slogdiscard"
+	"linkify/internal/lib/logger/zapdiscard"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -48,9 +48,9 @@ func TestSaveHandler(t *testing.T) {
 			body:       fmt.Sprintf(`{"url": "%s"}`, "some invalid URL"),
 		},
 		{
-			name:       "SaveURL Error",
+			name:       "Save Error",
 			url:        "https://google.com",
-			respError:  "failed to save url",
+			respError:  "failed to generate unique alias",
 			mockError:  errors.New("unexpected error"),
 			statusCode: http.StatusInternalServerError,
 			body:       fmt.Sprintf(`{"url": "%s"}`, "https://google.com"),
@@ -76,7 +76,7 @@ func TestSaveHandler(t *testing.T) {
 			metricsSaverMock := mocker.NewMetricsSaver(t)
 			metricsSaverMock.On("IncLinksCreated").Maybe()
 			if tc.respError == "" || tc.mockError != nil {
-				urlSaverMock.On("SaveURL", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
+				urlSaverMock.On("Save", tc.url, mock.AnythingOfType("string"), mock.AnythingOfType("time.Time")).
 					Return(tc.mockError).
 					Once()
 
@@ -86,7 +86,7 @@ func TestSaveHandler(t *testing.T) {
 						Once()
 				}
 			}
-			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength, metricsSaverMock)
+			handler := save.New(zapdiscard.New(), urlSaverMock, cacheSaverMock, aliasLength, metricsSaverMock)
 
 			req, err := http.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(tc.body)))
 			require.NoError(t, err)

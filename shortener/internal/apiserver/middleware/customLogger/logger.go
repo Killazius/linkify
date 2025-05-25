@@ -2,41 +2,34 @@ package logger
 
 import (
 	"github.com/go-chi/chi/v5/middleware"
-	"log/slog"
+	"go.uber.org/zap"
 	"net/http"
 	"time"
 )
 
-func New(log *slog.Logger) func(next http.Handler) http.Handler {
+func New(log *zap.SugaredLogger) func(next http.Handler) http.Handler {
+
 	return func(next http.Handler) http.Handler {
-		log := log.With(
-			slog.String("component", "middleware/custom_logger"),
-		)
-
-		log.Info("customLogger middleware enabled")
-
-		fn := func(w http.ResponseWriter, r *http.Request) {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			entry := log.With(
-				slog.String("method", r.Method),
-				slog.String("path", r.URL.Path),
-				slog.String("remote_addr", r.RemoteAddr),
-				slog.String("user_agent", r.UserAgent()),
-				slog.String("request_id", middleware.GetReqID(r.Context())),
+				"method", r.Method,
+				"path", r.URL.Path,
+				"remote_addr", r.RemoteAddr,
+				"request_id", middleware.GetReqID(r.Context()),
 			)
-			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
 
-			t1 := time.Now()
+			ww := middleware.NewWrapResponseWriter(w, r.ProtoMajor)
+			start := time.Now()
+
 			defer func() {
-				entry.Info("request completed",
-					slog.Int("status", ww.Status()),
-					slog.Int("bytes", ww.BytesWritten()),
-					slog.String("duration", time.Since(t1).String()),
+				entry.Infow("request completed",
+					"status", ww.Status(),
+					"bytes", ww.BytesWritten(),
+					"duration", time.Since(start).String(),
 				)
 			}()
 
 			next.ServeHTTP(ww, r)
-		}
-
-		return http.HandlerFunc(fn)
+		})
 	}
 }

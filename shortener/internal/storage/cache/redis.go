@@ -12,8 +12,8 @@ type Storage struct {
 	client *redis.Client
 }
 
-func NewStorage(addr, password string, db int) (*Storage, error) {
-	const op = "storage.cache.NewStorage"
+func New(addr, password string, db int) (*Storage, error) {
+	const op = "storage.cache.New"
 	client := redis.NewClient(&redis.Options{
 		Addr:     addr,
 		Password: password,
