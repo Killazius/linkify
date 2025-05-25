@@ -30,7 +30,11 @@ import (
 // @BasePath /
 func main() {
 	cfg := config.MustLoad()
-	log := logger.SetupLogger(cfg.Env)
+	log, err := logger.LoadLoggerConfig("config/logger.json")
+	if err != nil || log == nil {
+
+		os.Exit(1)
+	}
 	storage, err := postgresql.NewStorage(cfg.StorageURL)
 	if err != nil {
 		log.Error("failed to initialize storage", sl.Err(err))
