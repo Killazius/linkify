@@ -50,7 +50,7 @@ func TestSaveHandler(t *testing.T) {
 		{
 			name:       "Save Error",
 			url:        "https://google.com",
-			respError:  "failed to save url",
+			respError:  "failed to generate unique alias",
 			mockError:  errors.New("unexpected error"),
 			statusCode: http.StatusInternalServerError,
 			body:       fmt.Sprintf(`{"url": "%s"}`, "https://google.com"),
