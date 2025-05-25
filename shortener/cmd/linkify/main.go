@@ -30,7 +30,8 @@ import (
 // @BasePath /
 func main() {
 	cfg := config.MustLoad()
-	log, err := logger.LoadLoggerConfig("config/logger.json")
+
+	log, err := logger.LoadLoggerConfig(cfg.LoggerPath)
 	if err != nil || log == nil {
 		os.Exit(1)
 	}

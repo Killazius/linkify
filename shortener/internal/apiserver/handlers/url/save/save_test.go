@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"linkify/internal/apiserver/handlers/url/save"
 	mocker "linkify/internal/apiserver/handlers/url/save/mocks"
-	"linkify/internal/lib/logger/handlers/slogdiscard"
+	"linkify/internal/lib/logger/zapdiscard"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -86,7 +86,7 @@ func TestSaveHandler(t *testing.T) {
 						Once()
 				}
 			}
-			handler := save.New(slogdiscard.NewDiscardLogger(), urlSaverMock, cacheSaverMock, aliasLength, metricsSaverMock)
+			handler := save.New(zapdiscard.New(), urlSaverMock, cacheSaverMock, aliasLength, metricsSaverMock)
 
 			req, err := http.NewRequest(http.MethodPost, "/url", bytes.NewReader([]byte(tc.body)))
 			require.NoError(t, err)

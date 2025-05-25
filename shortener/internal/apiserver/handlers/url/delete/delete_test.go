@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	del "linkify/internal/apiserver/handlers/url/delete"
 	mocker "linkify/internal/apiserver/handlers/url/delete/mocks"
-	"linkify/internal/lib/logger/handlers/slogdiscard"
+	"linkify/internal/lib/logger/zapdiscard"
 	"linkify/internal/storage"
 	"net/http"
 	"net/http/httptest"
@@ -76,7 +76,7 @@ func TestDeleteHandler(t *testing.T) {
 				}
 			}
 
-			handler := del.New(slogdiscard.NewDiscardLogger(), urlDeleterMock, cacheDeleterMock, metricsDeleterMock)
+			handler := del.New(zapdiscard.New(), urlDeleterMock, cacheDeleterMock, metricsDeleterMock)
 			url := fmt.Sprintf("/url/%s", tc.alias)
 			req, err := http.NewRequest(http.MethodDelete, url, nil)
 			require.NoError(t, err)

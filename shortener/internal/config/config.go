@@ -9,8 +9,8 @@ import (
 )
 
 type Config struct {
-	Env        string     `yaml:"env" env:"ENV" env-default:"local"`
-	StorageURL string     `env:"STORAGE_URL" env-required:"true"`
+	StorageURL string
+	LoggerPath string     `yaml:"logger_path"`
 	HTTPServer HTTPServer `yaml:"http_server"`
 	Redis      Redis      `yaml:"redis"`
 	Prometheus Prometheus `yaml:"prometheus"`
@@ -44,11 +44,9 @@ func MustLoad() *Config {
 	if _, err := os.Stat(configPath); os.IsNotExist(err) {
 		log.Fatalf("CONFIG_PATH does not exist: %s", configPath)
 	}
-	if err := os.Setenv("STORAGE_URL", buildPostgresURL()); err != nil {
-		log.Printf("failed to set STORAGE_URL: %v", err)
-	}
 
 	var cfg Config
+	cfg.StorageURL = buildPostgresURL()
 	if err := cleanenv.ReadConfig(configPath, &cfg); err != nil {
 		log.Fatalf("Error loading config: %s", err)
 	}

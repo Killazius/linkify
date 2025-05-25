@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"linkify/internal/apiserver/handlers/url/redirect"
 	mocker "linkify/internal/apiserver/handlers/url/redirect/mocks"
-	"linkify/internal/lib/logger/handlers/slogdiscard"
+	"linkify/internal/lib/logger/zapdiscard"
 	"linkify/internal/storage"
 	"net/http"
 	"net/http/httptest"
@@ -83,7 +83,7 @@ func TestRedirectHandler(t *testing.T) {
 				}
 			}
 
-			handler := redirect.New(slogdiscard.NewDiscardLogger(), urlGetterMock, cacheGetterMock, metricsGetterMock)
+			handler := redirect.New(zapdiscard.New(), urlGetterMock, cacheGetterMock, metricsGetterMock)
 			url := fmt.Sprintf("/%s", tc.alias)
 			req, err := http.NewRequest(http.MethodGet, url, nil)
 			require.NoError(t, err)

@@ -3,8 +3,8 @@ http_server:
   timeout: "4s"
   idle_timeout: "60s"
   alias_length: 6
-
 prometheus:
   address: "0.0.0.0:8083"
   timeout: "4s"
   idle_timeout: "60s"
+logger_path: "config/logger.json"
