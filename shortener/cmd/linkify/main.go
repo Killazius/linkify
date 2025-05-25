@@ -2,11 +2,11 @@ package main
 
 import (
 	"context"
+	"go.uber.org/zap"
 	_ "linkify/docs"
 	"linkify/internal/apiserver"
 	"linkify/internal/config"
 	"linkify/internal/lib/logger"
-	"linkify/internal/lib/logger/sl"
 	"linkify/internal/metrics"
 	"linkify/internal/storage/cache"
 	"linkify/internal/storage/postgresql"
@@ -32,26 +32,23 @@ func main() {
 	cfg := config.MustLoad()
 	log, err := logger.LoadLoggerConfig("config/logger.json")
 	if err != nil || log == nil {
-
 		os.Exit(1)
 	}
 	storage, err := postgresql.NewStorage(cfg.StorageURL)
 	if err != nil {
-		log.Error("failed to initialize storage", sl.Err(err))
-		os.Exit(1)
+		log.Fatal("failed to initialize storage", zap.Error(err))
 	}
 	redis, err := cache.NewStorage(cfg.Redis.Address, cfg.Redis.Password, cfg.Redis.DB)
 	if err != nil {
-		log.Error("failed to initialize cache", sl.Err(err))
-		os.Exit(1)
+		log.Fatal("failed to initialize cache", zap.Error(err))
 	}
 	metricsCollector := metrics.New(cfg.Prometheus, log)
 	srv := apiserver.New(cfg.HTTPServer, log, storage, redis, metricsCollector)
 
 	go srv.MustRun()
-	log.Info("starting server", "address", cfg.HTTPServer.Address)
-	go metricsCollector.MustRun(log)
-	log.Info("starting metricsCollector", "address", cfg.Prometheus.Address)
+	log.Infow("starting server", "address", cfg.HTTPServer.Address)
+	go metricsCollector.MustRun()
+	log.Infow("starting metricsCollector", "address", cfg.Prometheus.Address)
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)

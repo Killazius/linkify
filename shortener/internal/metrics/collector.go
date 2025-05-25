@@ -9,7 +9,6 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 	"linkify/internal/config"
-	"linkify/internal/lib/logger/sl"
 	"net/http"
 	"time"
 )
@@ -133,6 +132,6 @@ func (c *Collector) Run() error {
 
 func (c *Collector) Stop(ctx context.Context) {
 	if err := c.srv.Shutdown(ctx); err != nil {
-		c.log.Error("failed to stop metrics client", sl.Err(err))
+		c.log.Error("failed to stop metrics client", zap.Error(err))
 	}
 }

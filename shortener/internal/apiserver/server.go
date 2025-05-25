@@ -7,23 +7,22 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
+	"go.uber.org/zap"
 	"linkify/internal/apiserver/handlers/url/delete"
 	"linkify/internal/apiserver/handlers/url/redirect"
 	"linkify/internal/apiserver/handlers/url/save"
 	customLogger "linkify/internal/apiserver/middleware/customLogger"
 	"linkify/internal/config"
-	"linkify/internal/lib/logger/sl"
 	"linkify/internal/metrics"
 	"linkify/internal/storage/cache"
 	"linkify/internal/storage/postgresql"
-	"log/slog"
 	"net/http"
 )
 
 type Server struct {
 	server  *http.Server
 	router  *chi.Mux
-	log     *slog.Logger
+	log     *zap.SugaredLogger
 	storage *postgresql.Storage
 	redis   *cache.Storage
 	metrics *metrics.Collector
@@ -32,7 +31,7 @@ type Server struct {
 
 func New(
 	cfg config.HTTPServer,
-	log *slog.Logger,
+	log *zap.SugaredLogger,
 	storage *postgresql.Storage,
 	redis *cache.Storage,
 	metrics *metrics.Collector,
@@ -75,7 +74,7 @@ func (s *Server) registerRoutes() {
 
 func (s *Server) MustRun() {
 	if err := s.Run(); err != nil {
-		s.log.Error(err.Error())
+		s.log.Fatal("failed to run HTTP-server", zap.Error(err))
 	}
 }
 func (s *Server) Run() error {
@@ -88,14 +87,14 @@ func (s *Server) Run() error {
 }
 func (s *Server) Stop(ctx context.Context) {
 	if err := s.server.Shutdown(ctx); err != nil {
-		s.log.Error("failed to stop HTTP server", sl.Err(err))
+		s.log.Error("failed to stop HTTP server", zap.Error(err))
 	}
 	err := s.redis.Stop()
 	if err != nil {
-		s.log.Error("failed to stop redis client", sl.Err(err))
+		s.log.Error("failed to stop redis client", zap.Error(err))
 	}
 	err = s.storage.Stop()
 	if err != nil {
-		s.log.Error("failed to stop storage client", sl.Err(err))
+		s.log.Error("failed to stop storage client", zap.Error(err))
 	}
 }

@@ -5,13 +5,12 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-playground/validator/v10"
+	"go.uber.org/zap"
 	"linkify/internal/lib/api/response"
-	"linkify/internal/lib/logger/sl"
 	"linkify/internal/lib/random"
 	"linkify/internal/storage"
 
 	"github.com/go-chi/render"
-	"log/slog"
 	"net/http"
 	"time"
 )
@@ -60,84 +59,70 @@ type MetricsSaver interface {
 // @Failure      400  {object}  response.Response  "Invalid request"
 // @Failure      500  {object}  response.Response  "Internal server error"
 // @Router       /url [post]
-func New(log *slog.Logger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int, m MetricsSaver) http.HandlerFunc {
+func New(log *zap.SugaredLogger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int, m MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const op = "handlers.url.save.New"
-		log = log.With(
-			slog.String("op", op),
-			slog.String("request_id", middleware.GetReqID(r.Context())),
+		log := log.With(
+			"request_id", middleware.GetReqID(r.Context()),
 		)
 
 		var req Request
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
-			log.Error("failed to decode request", sl.Err(err))
+			log.Error("failed to decode request", zap.Error(err))
 
 			w.WriteHeader(http.StatusBadRequest)
 			render.JSON(w, r, response.Error("failed to decode request"))
 			return
 		}
 
-		log.Info("request body decoded", slog.Any("request", req))
+		log.Infow("request body decoded", "request", req)
 
 		if err = validator.New().Struct(req); err != nil {
 			var validateErrs validator.ValidationErrors
 			errors.As(err, &validateErrs)
 
-			log.Error("failed to validate request", sl.Err(err))
+			log.Error("failed to validate request", zap.Error(err))
 			w.WriteHeader(http.StatusBadRequest)
 			render.JSON(w, r, response.ValidateError(validateErrs))
 			return
 		}
 		now := time.Now()
-		maxAttempts := 5
-		var alias string
-		for attempt := 0; attempt < maxAttempts; attempt++ {
-			alias = random.NewRandomString(aliasLength)
-			err = urlSaver.SaveURL(req.URL, alias, now)
-			if err == nil {
-				break
-			}
-
-			if !errors.Is(err, storage.ErrAliasExists) {
-				log.Error("failed to save url", sl.Err(err))
-				w.WriteHeader(http.StatusInternalServerError)
-				render.JSON(w, r, response.Error("failed to save url"))
-				return
-			}
-
-			log.Info("alias already exists, generating new one", "alias", alias)
-		}
-
+		alias, err := generateUniqueAlias(log, urlSaver, req.URL, aliasLength, now)
 		if err != nil {
-			log.Error("failed to generate unique alias after multiple attempts", sl.Err(err))
+			log.Error("failed to generate unique alias after multiple attempts", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, response.Error("failed to generate unique alias"))
 			return
 		}
-		ctx := r.Context()
-		err = CacheSaver.Set(ctx, alias, req.URL, 1*time.Hour)
-		if err != nil {
-			if errors.Is(err, storage.ErrAliasExists) {
-				log.Info("alias already exists", "alias", alias)
-				render.JSON(w, r, response.Error("alias already exists"))
-				return
-			}
-			render.JSON(w, r, response.Error("failed to save alias in cache"))
-			return
+		if err := CacheSaver.Set(r.Context(), alias, req.URL, time.Hour); err != nil {
+			log.Errorw("failed to save in cache", "alias", alias, "error", err)
 		}
-		log.Info("url saved in cache", "alias", alias, "url", req.URL)
-
-		log.Info("new URL added", "url", req.URL)
 		m.IncLinksCreated()
-		responseOK(w, r, alias, time.Now())
+		log.Infow("new URL added", "url", req.URL)
+		render.JSON(w, r, Response{
+			Response:  response.OK(),
+			Alias:     alias,
+			CreatedAt: now,
+		})
 	}
 }
 
-func responseOK(w http.ResponseWriter, r *http.Request, alias string, createdAt time.Time) {
-	render.JSON(w, r, Response{
-		Response:  response.OK(),
-		Alias:     alias,
-		CreatedAt: createdAt,
-	})
+func generateUniqueAlias(log *zap.SugaredLogger, saver URLSaver, url string, length int, createdAt time.Time) (string, error) {
+	const maxAttempts = 5
+
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		alias := random.NewRandomString(length)
+		err := saver.SaveURL(url, alias, createdAt)
+		if err == nil {
+			return alias, nil
+		}
+
+		if !errors.Is(err, storage.ErrAliasExists) {
+			return "", err
+		}
+
+		log.Infow("alias collision", "attempt", attempt+1, "alias", alias)
+	}
+
+	return "", errors.New("max attempts reached")
 }
