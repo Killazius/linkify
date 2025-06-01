@@ -1,0 +1,5 @@
+logger_path: "config/logger.json"
+grpc:
+  port: 50051
+  timeout: 5s
+migrations_path: "migrations"

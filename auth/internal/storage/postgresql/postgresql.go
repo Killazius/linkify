@@ -1,0 +1,75 @@
+package postgresql
+
+import (
+	"auth/internal/domain"
+	"context"
+	"errors"
+	"fmt"
+	"github.com/golang-migrate/migrate"
+	_ "github.com/golang-migrate/migrate/database/postgres"
+	_ "github.com/golang-migrate/migrate/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
+)
+
+type Storage struct {
+	db *pgxpool.Pool
+}
+
+func New(dbUrl, migrationPath string) (*Storage, error) {
+	conn, err := pgxpool.New(context.Background(), dbUrl)
+	if err != nil {
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
+	}
+	if err = Migrate(dbUrl, migrationPath); err != nil {
+		return nil, fmt.Errorf("failed to migrate database: %w", err)
+	}
+	return &Storage{db: conn}, nil
+}
+func Migrate(url, migrationPath string) error {
+	sourceURL := "file://" + migrationPath
+	m, err := migrate.New(sourceURL, url)
+	if err != nil {
+		return fmt.Errorf("failed to create migrate instance: %w", err)
+	}
+	if err = m.Up(); err != nil && !errors.Is(err, migrate.ErrNoChange) {
+		return fmt.Errorf("failed to apply migrations: %w", err)
+	}
+	return nil
+}
+
+func (s *Storage) Stop() {
+	s.db.Close()
+}
+
+func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (int64, error) {
+	query := `INSERT INTO auth_schema.users (email, pass_hash) VALUES ($1, $2) RETURNING id`
+
+	var id int64
+	err := s.db.QueryRow(ctx, query, email, passHash).Scan(&id)
+	if err != nil {
+		return 0, fmt.Errorf("failed to save user: %w", err)
+	}
+
+	return id, nil
+}
+func (s *Storage) LoginUser(ctx context.Context, email string) (domain.User, error) {
+	query := `SELECT id,email,pass_hash FROM auth_schema.users WHERE email = $1`
+	var user domain.User
+	err := s.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PassHash)
+	if err != nil {
+		return domain.User{}, fmt.Errorf("failed to save user: %w", err)
+	}
+	return user, nil
+}
+func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
+	query := `SELECT is_admin FROM auth_schema.users WHERE id = $1`
+	var isAdmin bool
+	err := s.db.QueryRow(ctx, query, userID).Scan(&isAdmin)
+	if err != nil {
+		return false, fmt.Errorf("failed to check for admin user: %w", err)
+	}
+	return isAdmin, nil
+}
+func (s *Storage) LogoutUser(ctx context.Context, userID int64) error {
+	panic("implement me")
+}
