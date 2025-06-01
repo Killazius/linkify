@@ -2,12 +2,15 @@ package postgresql
 
 import (
 	"auth/internal/domain"
+	"auth/internal/storage"
 	"context"
 	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate"
 	_ "github.com/golang-migrate/migrate/database/postgres"
 	_ "github.com/golang-migrate/migrate/source/file"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -47,17 +50,23 @@ func (s *Storage) SaveUser(ctx context.Context, email string, passHash []byte) (
 	var id int64
 	err := s.db.QueryRow(ctx, query, email, passHash).Scan(&id)
 	if err != nil {
-		return 0, fmt.Errorf("failed to save user: %w", err)
+		var pgxErr *pgconn.PgError
+		if errors.As(err, &pgxErr) && pgxErr.Code == "23505" {
+			return 0, storage.ErrUserExists
+		}
+		return 0, err
 	}
-
 	return id, nil
 }
-func (s *Storage) LoginUser(ctx context.Context, email string) (domain.User, error) {
+func (s *Storage) LoginUser(ctx context.Context, email string) (*domain.User, error) {
 	query := `SELECT id,email,pass_hash FROM auth_schema.users WHERE email = $1`
-	var user domain.User
+	user := &domain.User{}
 	err := s.db.QueryRow(ctx, query, email).Scan(&user.ID, &user.Email, &user.PassHash)
 	if err != nil {
-		return domain.User{}, fmt.Errorf("failed to save user: %w", err)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, storage.ErrUserNotFound
+		}
+		return nil, err
 	}
 	return user, nil
 }
@@ -66,10 +75,13 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	var isAdmin bool
 	err := s.db.QueryRow(ctx, query, userID).Scan(&isAdmin)
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, storage.ErrUserNotFound
+		}
 		return false, fmt.Errorf("failed to check for admin user: %w", err)
 	}
 	return isAdmin, nil
 }
-func (s *Storage) LogoutUser(ctx context.Context, userID int64) error {
+func (s *Storage) LogoutUser(ctx context.Context, token string) (bool, error) {
 	panic("implement me")
 }

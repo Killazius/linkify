@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func NewToken(user domain.User, duration time.Duration) (string, error) {
+func NewToken(user *domain.User, duration time.Duration) (string, error) {
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
 		"uid":   user.ID,
 		"email": user.Email,

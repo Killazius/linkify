@@ -3,7 +3,10 @@ package repository
 import (
 	"auth/internal/domain"
 	"auth/internal/lib/jwt"
+	"auth/internal/storage"
 	"context"
+	"errors"
+	"fmt"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
 	"time"
@@ -11,7 +14,7 @@ import (
 
 type Storage interface {
 	SaveUser(ctx context.Context, email string, passHash []byte) (int64, error)
-	LoginUser(ctx context.Context, email string) (domain.User, error)
+	LoginUser(ctx context.Context, email string) (*domain.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
 	LogoutUser(ctx context.Context, token string) (bool, error)
 }
@@ -20,6 +23,10 @@ type Repository struct {
 	storage  Storage
 	tokenTTL time.Duration
 }
+
+var (
+	ErrInvalidCredentials = errors.New("invalid credentials")
+)
 
 func New(log *zap.SugaredLogger, storage Storage, tokenTTL time.Duration) *Repository {
 	return &Repository{
@@ -32,11 +39,14 @@ func New(log *zap.SugaredLogger, storage Storage, tokenTTL time.Duration) *Repos
 func (r *Repository) Register(ctx context.Context, email, password string) (int64, error) {
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return 0, err
+		return 0, fmt.Errorf("failed to hash password: %w", err)
 	}
 	userID, err := r.storage.SaveUser(ctx, email, passwordHash)
 	if err != nil {
-		return 0, err
+		if errors.Is(err, storage.ErrUserExists) {
+			return 0, ErrInvalidCredentials
+		}
+		return 0, fmt.Errorf("failed to save user: %w", err)
 	}
 
 	return userID, nil
@@ -44,21 +54,24 @@ func (r *Repository) Register(ctx context.Context, email, password string) (int6
 func (r *Repository) Login(ctx context.Context, email, password string) (string, error) {
 	user, err := r.storage.LoginUser(ctx, email)
 	if err != nil {
-		return "", err
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return "", ErrInvalidCredentials
+		}
+		return "", fmt.Errorf("failed to login: %w", err)
 	}
 	if err = bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to compare password: %w", err)
 	}
 	token, err := jwt.NewToken(user, r.tokenTTL)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to generate token: %w", err)
 	}
 	return token, nil
 }
 func (r *Repository) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	isAdmin, err := r.storage.IsAdmin(ctx, userID)
 	if err != nil {
-		return false, err
+		return false, fmt.Errorf("failed to check if user is an admin: %w", err)
 	}
 	return isAdmin, nil
 }
@@ -66,7 +79,10 @@ func (r *Repository) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 func (r *Repository) Logout(ctx context.Context, token string) (bool, error) {
 	success, err := r.storage.LogoutUser(ctx, token)
 	if err != nil {
-		return false, err
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return false, ErrInvalidCredentials
+		}
+		return false, fmt.Errorf("failed to logout: %w", err)
 	}
 	return success, nil
 }
