@@ -1,20 +1,23 @@
-package apiserver
+package transport
 
 import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/Killazius/linkify-proto/pkg/api"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
-	"linkify/internal/apiserver/handlers/url/delete"
-	"linkify/internal/apiserver/handlers/url/redirect"
-	"linkify/internal/apiserver/handlers/url/save"
-	customLogger "linkify/internal/apiserver/middleware/customLogger"
-	"linkify/internal/apiserver/middleware/httpmetrics"
+	"google.golang.org/grpc"
 	"linkify/internal/config"
 	"linkify/internal/metrics"
+	"linkify/internal/transport/handlers/url/delete"
+	"linkify/internal/transport/handlers/url/redirect"
+	"linkify/internal/transport/handlers/url/save"
+	"linkify/internal/transport/middleware/auth"
+	customLogger "linkify/internal/transport/middleware/customLogger"
+	"linkify/internal/transport/middleware/httpmetrics"
 	"net/http"
 	"time"
 )
@@ -32,6 +35,9 @@ type Cache interface {
 	Delete(ctx context.Context, key string) error
 	Stop() error
 }
+type Auth interface {
+	ValidateToken(ctx context.Context, in *api.TokenRequest, opts ...grpc.CallOption) (*api.TokenResponse, error)
+}
 
 type Server struct {
 	server  *http.Server
@@ -41,6 +47,7 @@ type Server struct {
 	cache   Cache
 	metrics *metrics.Collector
 	config  config.HTTPServer
+	client  Auth
 }
 
 func New(
@@ -49,6 +56,8 @@ func New(
 	repo Repository,
 	cache Cache,
 	metrics *metrics.Collector,
+	client Auth,
+
 ) *Server {
 	router := chi.NewRouter()
 	srv := &Server{
@@ -65,6 +74,7 @@ func New(
 		cache:   cache,
 		metrics: metrics,
 		config:  cfg,
+		client:  client,
 	}
 
 	srv.registerRoutes()
@@ -77,6 +87,7 @@ func (s *Server) registerRoutes() {
 	s.router.Use(customLogger.New(s.log))
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.URLFormat)
+	s.router.Use(auth.New(s.client, s.log))
 	s.router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.config.IP)),
 	))

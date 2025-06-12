@@ -4,12 +4,13 @@ import (
 	"context"
 	"go.uber.org/zap"
 	_ "linkify/docs"
-	"linkify/internal/apiserver"
+	"linkify/internal/client"
 	"linkify/internal/config"
-	"linkify/internal/lib/logger"
 	"linkify/internal/metrics"
 	"linkify/internal/storage/cache"
 	"linkify/internal/storage/postgresql"
+	"linkify/internal/transport"
+	"linkify/pkg/logger"
 	"os"
 	"os/signal"
 	"syscall"
@@ -30,7 +31,6 @@ import (
 // @BasePath /
 func main() {
 	cfg := config.MustLoad()
-
 	log, err := logger.LoadLoggerConfig(cfg.LoggerPath)
 	if err != nil || log == nil {
 		os.Exit(1)
@@ -44,7 +44,12 @@ func main() {
 		log.Fatal("failed to initialize cache", zap.Error(err))
 	}
 	metricsCollector := metrics.New(cfg.Prometheus, log)
-	srv := apiserver.New(cfg.HTTPServer, log, repo, redisCache, metricsCollector)
+
+	cc, err := client.NewAuthClient(log, "auth:50051")
+	if err != nil {
+		log.Fatal("failed to initialize auth client", zap.Error(err))
+	}
+	srv := transport.New(cfg.HTTPServer, log, repo, redisCache, metricsCollector, cc)
 
 	go srv.MustRun()
 	log.Infow("starting server", "address", cfg.HTTPServer.Address)

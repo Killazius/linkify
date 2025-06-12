@@ -23,6 +23,7 @@ func LoadLoggerConfig(path string) (*zap.SugaredLogger, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to build logger: %w", err)
 	}
+	zap.ReplaceGlobals(logger)
 
 	return logger.Sugar(), nil
 }
