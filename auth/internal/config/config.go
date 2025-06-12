@@ -57,15 +57,7 @@ func buildPostgresURL() string {
 		port = "5432"
 	}
 	db := os.Getenv("POSTGRES_DB")
-	maxConnections := os.Getenv("POSTGRES_MAX_CONNECTIONS")
-	if maxConnections == "" {
-		maxConnections = "10"
-	}
-	minConnections := os.Getenv("POSTGRES_MIN_CONNECTIONS")
-	if minConnections == "" {
-		minConnections = "5"
-	}
 
-	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable", // &pool_max_conns=%s&pool_min_conns=%s
+	return fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
 		user, password, host, port, db)
 }

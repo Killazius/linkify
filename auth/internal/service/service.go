@@ -29,7 +29,7 @@ func Register(gRPC *grpc.Server, service *Service) {
 	api.RegisterAuthServer(gRPC, service)
 }
 
-func (s *Service) ValidateToken(ctx context.Context, req *api.TokenRequest) (*api.TokenResponse, error) {
+func (s *Service) ValidateToken(_ context.Context, req *api.TokenRequest) (*api.TokenResponse, error) {
 	user, err := jwt.VerifyToken(req.Token)
 	if err != nil {
 		return nil, status.Error(codes.InvalidArgument, "invalid token")

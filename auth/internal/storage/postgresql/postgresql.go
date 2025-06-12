@@ -7,7 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-migrate/migrate"
-	_ "github.com/golang-migrate/migrate/database/postgres"
+	_ "github.com/golang-migrate/migrate/database/postgres" // db
 	_ "github.com/golang-migrate/migrate/source/file"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,12 +18,12 @@ type Storage struct {
 	db *pgxpool.Pool
 }
 
-func New(dbUrl, migrationPath string) (*Storage, error) {
-	conn, err := pgxpool.New(context.Background(), dbUrl)
+func New(dbURL, migrationPath string) (*Storage, error) {
+	conn, err := pgxpool.New(context.Background(), dbURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	if err = Migrate(dbUrl, migrationPath); err != nil {
+	if err = Migrate(dbURL, migrationPath); err != nil {
 		return nil, fmt.Errorf("failed to migrate database: %w", err)
 	}
 	return &Storage{db: conn}, nil

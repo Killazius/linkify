@@ -14,6 +14,13 @@ type Client interface {
 	ValidateToken(ctx context.Context, in *api.TokenRequest, opts ...grpc.CallOption) (*api.TokenResponse, error)
 }
 
+type contextKey string
+
+const (
+	userIDKey    contextKey = "userID"
+	userEmailKey contextKey = "userEmail"
+)
+
 func New(auth Client, log *zap.SugaredLogger) func(next http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -44,8 +51,8 @@ func New(auth Client, log *zap.SugaredLogger) func(next http.Handler) http.Handl
 				return
 			}
 
-			ctx := context.WithValue(r.Context(), "user_id", resp.UserId)
-			ctx = context.WithValue(ctx, "user_email", resp.Email)
+			ctx := context.WithValue(r.Context(), userIDKey, resp.UserId)
+			ctx = context.WithValue(ctx, userEmailKey, resp.Email)
 
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
