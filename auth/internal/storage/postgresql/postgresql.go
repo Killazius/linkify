@@ -88,7 +88,12 @@ func (s *Storage) DeleteAccount(ctx context.Context, userID int64) error {
 	if err != nil {
 		return err
 	}
-	defer tx.Rollback(ctx)
+	defer func(tx pgx.Tx, ctx context.Context) {
+		err := tx.Rollback(ctx)
+		if err != nil {
+			return
+		}
+	}(tx, ctx)
 
 	if _, err := tx.Exec(ctx, "DELETE FROM auth_schema.refresh_tokens WHERE user_id = $1", userID); err != nil {
 		return fmt.Errorf("failed to delete refresh tokens: %w", err)

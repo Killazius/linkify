@@ -16,7 +16,6 @@ import (
 type Server struct {
 	server *http.Server
 	log    *zap.SugaredLogger
-	config config.HTTPConfig
 }
 
 func NewServer(
