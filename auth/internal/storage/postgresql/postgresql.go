@@ -82,6 +82,22 @@ func (s *Storage) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	}
 	return isAdmin, nil
 }
-func (s *Storage) LogoutUser(ctx context.Context, token string) (bool, error) {
-	panic("implement me")
-}
+
+//func (s *Storage) LogoutUser(ctx context.Context, token string) (bool, error) {
+//	queryCheck := `SELECT COUNT(*) FROM auth_schema.blacklisted_tokens WHERE token = $1`
+//	var count int
+//	err := s.db.QueryRow(ctx, queryCheck, token).Scan(&count)
+//	if err != nil {
+//		return false, fmt.Errorf("failed to check token: %w", err)
+//	}
+//	if count > 0 {
+//		return false, storage.ErrTokenAlreadyBlacklisted
+//	}
+//	queryInsert := `INSERT INTO auth_schema.blacklisted_tokens (token, created_at) VALUES ($1, $2)`
+//	_, err = s.db.Exec(ctx, queryInsert, token, time.Now())
+//	if err != nil {
+//		return false, fmt.Errorf("failed to blacklist token: %w", err)
+//	}
+//
+//	return true, nil
+//}

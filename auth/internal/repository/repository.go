@@ -12,27 +12,40 @@ import (
 	"time"
 )
 
-type Storage interface {
+type UserStorage interface {
 	SaveUser(ctx context.Context, email string, passHash []byte) (int64, error)
 	LoginUser(ctx context.Context, email string) (*domain.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
-	LogoutUser(ctx context.Context, token string) (bool, error)
+	//LogoutUser(ctx context.Context, token string) (bool, error)
 }
+type RefreshTokenStorage interface {
+	StoreRefreshToken(ctx context.Context, userID string, token string, expiresAt time.Time) error
+	GetRefreshToken(ctx context.Context, tokenHash string) (*storage.RefreshToken, error)
+	ValidateRefreshToken(ctx context.Context, token string) (*storage.RefreshToken, error)
+	DeleteRefreshToken(ctx context.Context, tokenHash string) error
+	DeleteRefreshTokenByUserID(ctx context.Context, userID int64) error
+	DeleteExpiredRefreshTokens(ctx context.Context) error
+}
+
 type Repository struct {
-	log      *zap.SugaredLogger
-	storage  Storage
-	tokenTTL time.Duration
+	log             *zap.SugaredLogger
+	userStorage     UserStorage
+	tokenStorage    RefreshTokenStorage
+	AccessTokenTTL  time.Duration
+	RefreshTokenTTL time.Duration
 }
 
 var (
 	ErrInvalidCredentials = errors.New("invalid credentials")
 )
 
-func New(log *zap.SugaredLogger, storage Storage, tokenTTL time.Duration) *Repository {
+func New(log *zap.SugaredLogger, userStorage UserStorage, tokenStorage RefreshTokenStorage, AccessTokenTTL time.Duration, RefreshTokenTTL time.Duration) *Repository {
 	return &Repository{
-		log:      log,
-		storage:  storage,
-		tokenTTL: tokenTTL,
+		log:             log,
+		userStorage:     userStorage,
+		tokenStorage:    tokenStorage,
+		AccessTokenTTL:  AccessTokenTTL,
+		RefreshTokenTTL: RefreshTokenTTL,
 	}
 }
 
@@ -41,7 +54,7 @@ func (r *Repository) Register(ctx context.Context, email, password string) (int6
 	if err != nil {
 		return 0, fmt.Errorf("failed to hash password: %w", err)
 	}
-	userID, err := r.storage.SaveUser(ctx, email, passwordHash)
+	userID, err := r.userStorage.SaveUser(ctx, email, passwordHash)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserExists) {
 			return 0, ErrInvalidCredentials
@@ -51,38 +64,90 @@ func (r *Repository) Register(ctx context.Context, email, password string) (int6
 
 	return userID, nil
 }
-func (r *Repository) Login(ctx context.Context, email, password string) (string, error) {
-	user, err := r.storage.LoginUser(ctx, email)
+func (r *Repository) Login(ctx context.Context, email, password string) (string, string, error) {
+	user, err := r.userStorage.LoginUser(ctx, email)
 	if err != nil {
 		if errors.Is(err, storage.ErrUserNotFound) {
-			return "", ErrInvalidCredentials
+			return "", "", ErrInvalidCredentials
 		}
-		return "", fmt.Errorf("failed to login: %w", err)
+		return "", "", fmt.Errorf("failed to login: %w", err)
 	}
 	if err = bcrypt.CompareHashAndPassword(user.PassHash, []byte(password)); err != nil {
-		return "", fmt.Errorf("failed to compare password: %w", err)
+		return "", "", fmt.Errorf("failed to compare password: %w", err)
 	}
-	token, err := jwt.NewToken(user, r.tokenTTL)
+	accessToken, err := jwt.NewToken(user, r.AccessTokenTTL)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token: %w", err)
+		return "", "", fmt.Errorf("failed to generate token: %w", err)
 	}
-	return token, nil
+	refreshToken, err := jwt.NewToken(user, r.RefreshTokenTTL)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate token: %w", err)
+	}
+	err = r.tokenStorage.StoreRefreshToken(ctx, user.ID, refreshToken, time.Now().Add(r.RefreshTokenTTL))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to store refresh token: %w", err)
+	}
+	return accessToken, refreshToken, nil
+}
+func (r *Repository) RefreshTokens(ctx context.Context, refreshToken string) (newAccessToken, newRefreshToken string, err error) {
+	rt, err := r.tokenStorage.ValidateRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to validate refresh token: %w", err)
+	}
+
+	user, err := r.userStorage.LoginUser(ctx, rt.Email)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to get user: %w", err)
+	}
+
+	newAccessToken, err = jwt.NewToken(user, r.AccessTokenTTL)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate new access token: %w", err)
+	}
+
+	newRefreshToken, err = jwt.NewToken(user, r.RefreshTokenTTL)
+	if err != nil {
+		return "", "", fmt.Errorf("failed to generate new refresh token: %w", err)
+	}
+
+	if err = r.tokenStorage.DeleteRefreshToken(ctx, rt.TokenHash); err != nil {
+		return "", "", fmt.Errorf("failed to delete old refresh token: %w", err)
+	}
+
+	err = r.tokenStorage.StoreRefreshToken(ctx, user.ID, newRefreshToken, time.Now().Add(r.RefreshTokenTTL))
+	if err != nil {
+		return "", "", fmt.Errorf("failed to store new refresh token: %w", err)
+	}
+
+	return newAccessToken, newRefreshToken, nil
 }
 func (r *Repository) IsAdmin(ctx context.Context, userID int64) (bool, error) {
-	isAdmin, err := r.storage.IsAdmin(ctx, userID)
+	isAdmin, err := r.userStorage.IsAdmin(ctx, userID)
 	if err != nil {
+		if errors.Is(err, storage.ErrUserNotFound) {
+			return false, ErrInvalidCredentials
+		}
 		return false, fmt.Errorf("failed to check if user is an admin: %w", err)
 	}
 	return isAdmin, nil
 }
 
-func (r *Repository) Logout(ctx context.Context, token string) (bool, error) {
-	success, err := r.storage.LogoutUser(ctx, token)
-	if err != nil {
-		if errors.Is(err, storage.ErrUserNotFound) {
-			return false, ErrInvalidCredentials
-		}
-		return false, fmt.Errorf("failed to logout: %w", err)
-	}
-	return success, nil
-}
+//func (r *Repository) Logout(ctx context.Context, refreshToken string) (bool, error) {
+//	success, err := r.userStorage.LogoutUser(ctx, refreshToken)
+//	if err != nil {
+//		if errors.Is(err, storage.ErrUserNotFound) {
+//			return false, ErrInvalidCredentials
+//		}
+//		return false, fmt.Errorf("failed to logout: %w", err)
+//	}
+//	hash, err := jwt.HashToken(refreshToken)
+//	if err != nil {
+//		return false, fmt.Errorf("failed to hash token: %w", err)
+//	}
+//
+//	if err = r.tokenStorage.DeleteRefreshToken(ctx, hash); err != nil {
+//		return false, fmt.Errorf("failed to delete refresh token: %w", err)
+//	}
+//
+//	return success, nil
+//}

@@ -9,16 +9,23 @@ import (
 )
 
 type Config struct {
-	LoggerPath     string `yaml:"logger_path"`
-	StorageURL     string
-	GRPC           GRPCConfig    `yaml:"grpc"`
-	MigrationsPath string        `yaml:"migrations_path"`
-	TokenTTL       time.Duration `yaml:"token_ttl" env-default:"1h"`
+	LoggerPath      string `yaml:"logger_path"`
+	StorageURL      string
+	GRPCServer      GRPCConfig    `yaml:"grpc_server"`
+	HTTPServer      HTTPConfig    `yaml:"http_server"`
+	MigrationsPath  string        `yaml:"migrations_path"`
+	AccessTokenTTL  time.Duration `yaml:"access_token_ttl"`
+	RefreshTokenTTL time.Duration `yaml:"refresh_token_ttl"`
 }
 
 type GRPCConfig struct {
 	Port    int           `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
+}
+type HTTPConfig struct {
+	Port        string        `yaml:"port"`
+	Timeout     time.Duration `yaml:"timeout"`
+	IdleTimeout time.Duration `yaml:"idle_timeout"`
 }
 
 func MustLoad() *Config {

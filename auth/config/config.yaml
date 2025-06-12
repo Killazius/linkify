@@ -1,5 +1,11 @@
 logger_path: "config/logger.json"
-grpc:
+grpc_server:
   port: 50051
   timeout: 5s
+http_server:
+  port: "8085"
+  timeout: 5s
+  idle_timeout: 60s
 migrations_path: "migrations"
+access_token_ttl: 1m
+refresh_token_ttl: 24h
