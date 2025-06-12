@@ -1,17 +1,20 @@
 BINARY_NAME=linkify
-DIR=shortener
-
+DIRS=shortener auth
 
 docker:
 	docker compose down && docker image prune -f && docker compose up -d --build
 
 swag:
-	cd ${DIR} && swag init -g ./cmd/${BINARY_NAME}/main.go -o ./docs
+	cd shortener && swag init -g ./cmd/${BINARY_NAME}/main.go -o ./docs
 
 test:
-	cd ${DIR} && go test -v -race -parallel 5 -shuffle=on -coverprofile=./cover.out -covermode=atomic ./...
+	@for dir in $(DIRS); do \
+		echo "Running tests in $$dir..."; \
+		cd $$dir && go test -v -race -parallel 5 -shuffle=on -coverprofile=./cover.out -covermode=atomic ./... && cd .. || exit 1; \
+	done
 
 lint:
-	cd ${DIR} && golangci-lint run ./...
-
-
+	@for dir in $(DIRS); do \
+		echo "Running linter in $$dir..."; \
+		cd $$dir && golangci-lint run ./... && cd .. || exit 1; \
+	done
