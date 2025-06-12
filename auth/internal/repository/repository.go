@@ -16,7 +16,7 @@ type UserStorage interface {
 	SaveUser(ctx context.Context, email string, passHash []byte) (int64, error)
 	LoginUser(ctx context.Context, email string) (*domain.User, error)
 	IsAdmin(ctx context.Context, userID int64) (bool, error)
-	//LogoutUser(ctx context.Context, token string) (bool, error)
+	DeleteAccount(ctx context.Context, userID int64) error
 }
 type RefreshTokenStorage interface {
 	StoreRefreshToken(ctx context.Context, userID string, token string, expiresAt time.Time) error
@@ -132,22 +132,31 @@ func (r *Repository) IsAdmin(ctx context.Context, userID int64) (bool, error) {
 	return isAdmin, nil
 }
 
-//func (r *Repository) Logout(ctx context.Context, refreshToken string) (bool, error) {
-//	success, err := r.userStorage.LogoutUser(ctx, refreshToken)
-//	if err != nil {
-//		if errors.Is(err, storage.ErrUserNotFound) {
-//			return false, ErrInvalidCredentials
-//		}
-//		return false, fmt.Errorf("failed to logout: %w", err)
-//	}
-//	hash, err := jwt.HashToken(refreshToken)
-//	if err != nil {
-//		return false, fmt.Errorf("failed to hash token: %w", err)
-//	}
-//
-//	if err = r.tokenStorage.DeleteRefreshToken(ctx, hash); err != nil {
-//		return false, fmt.Errorf("failed to delete refresh token: %w", err)
-//	}
-//
-//	return success, nil
-//}
+func (r *Repository) Logout(ctx context.Context, token string) error {
+	hash, err := jwt.HashToken(token)
+	if err != nil {
+		return fmt.Errorf("failed to hash token: %w", err)
+	}
+
+	rt, err := r.tokenStorage.GetRefreshToken(ctx, hash)
+	if err != nil {
+		return fmt.Errorf("failed to get refresh token: %w", err)
+	}
+	if rt == nil {
+		return fmt.Errorf("token not found")
+	}
+
+	if err := r.tokenStorage.DeleteRefreshToken(ctx, hash); err != nil {
+		return fmt.Errorf("failed to delete refresh token: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteAccount(ctx context.Context, userID int64) error {
+	err := r.userStorage.DeleteAccount(ctx, userID)
+	if err != nil {
+		return fmt.Errorf("failed to delete account: %w", err)
+	}
+	return nil
+}

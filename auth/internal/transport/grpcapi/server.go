@@ -1,4 +1,4 @@
-package service
+package grpcapi
 
 import (
 	"auth/internal/lib/jwt"
@@ -14,7 +14,8 @@ type Repository interface {
 	Login(ctx context.Context, email, password string) (access, refresh string, err error)
 	IsAdmin(ctx context.Context, userID int64) (isAdmin bool, err error)
 	RefreshTokens(ctx context.Context, refreshToken string) (newAccessToken, newRefreshToken string, err error)
-	//Logout(ctx context.Context, token string) (success bool, err error)
+	Logout(ctx context.Context, token string) (err error)
+	DeleteAccount(ctx context.Context, userID int64) error
 }
 type Service struct {
 	repo Repository

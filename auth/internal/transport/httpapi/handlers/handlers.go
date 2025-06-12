@@ -1,16 +1,29 @@
 package handlers
 
 import (
+	"auth/internal/lib/jwt"
 	"auth/internal/repository"
-	"auth/internal/service"
+	"auth/internal/transport/grpcapi"
 	"errors"
 	"github.com/go-chi/render"
 	"go.uber.org/zap"
 	"net/http"
+	"strconv"
 	"time"
 )
 
-func Register(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc {
+type AuthHandler struct {
+	log  *zap.SugaredLogger
+	repo grpcapi.Repository
+}
+
+func NewAuthHandler(log *zap.SugaredLogger, authService grpcapi.Repository) *AuthHandler {
+	return &AuthHandler{
+		log:  log,
+		repo: authService,
+	}
+}
+func (h *AuthHandler) Register() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Email    string `json:"email"`
@@ -18,21 +31,20 @@ func Register(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc 
 		}
 		err := render.DecodeJSON(r.Body, &req)
 		if err != nil {
-			log.Error("failed to decode request", zap.Error(err))
+			h.log.Error("failed to decode request", zap.Error(err))
 
 			w.WriteHeader(http.StatusBadRequest)
 			render.JSON(w, r, "implement me")
 			return
 		}
-		uid, err := repo.Register(r.Context(), req.Email, req.Password)
+		uid, err := h.repo.Register(r.Context(), req.Email, req.Password)
 		if err != nil {
 			if errors.Is(err, repository.ErrInvalidCredentials) {
 				w.WriteHeader(http.StatusBadRequest)
 				render.JSON(w, r, "implement me")
 				return
-				//return nil, status.Error(codes.AlreadyExists, "user already exists")
 			}
-			log.Error("failed to register user", zap.Error(err))
+			h.log.Error("failed to register user", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, "implement me")
 			return
@@ -42,7 +54,7 @@ func Register(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc 
 	}
 }
 
-func Login(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc {
+func (h *AuthHandler) Login() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req struct {
 			Email    string `json:"email"`
@@ -50,30 +62,30 @@ func Login(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc {
 		}
 
 		if err := render.DecodeJSON(r.Body, &req); err != nil {
-			log.Error("failed to decode login request", zap.Error(err))
+			h.log.Error("failed to decode login request", zap.Error(err))
 			w.WriteHeader(http.StatusBadRequest)
 			render.JSON(w, r, map[string]string{"error": "invalid request format"})
 			return
 		}
 
-		accessToken, refreshToken, err := repo.Login(r.Context(), req.Email, req.Password)
+		accessToken, refreshToken, err := h.repo.Login(r.Context(), req.Email, req.Password)
 		if err != nil {
 			if errors.Is(err, repository.ErrInvalidCredentials) {
-				log.Warn("invalid login attempt", zap.String("email", req.Email))
+				h.log.Warn("invalid login attempt", zap.String("email", req.Email))
 				w.WriteHeader(http.StatusUnauthorized)
 				render.JSON(w, r, map[string]string{"error": "invalid credentials"})
 				return
 			}
 
-			log.Error("failed to login user", zap.Error(err))
+			h.log.Error("failed to login user", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, map[string]string{"error": "internal server error"})
 			return
 		}
 
-		repoImpl, ok := repo.(*repository.Repository)
+		repoImpl, ok := h.repo.(*repository.Repository)
 		if !ok {
-			log.Error("invalid repository type")
+			h.log.Error("invalid repository type")
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, map[string]string{"error": "internal server error"})
 			return
@@ -88,27 +100,27 @@ func Login(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc {
 	}
 }
 
-func Refresh(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc {
+func (h *AuthHandler) Refresh() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		cookie, err := r.Cookie("refresh_token")
 		if err != nil {
-			log.Warn("refresh token cookie not found", zap.Error(err))
+			h.log.Warn("refresh token cookie not found", zap.Error(err))
 			w.WriteHeader(http.StatusUnauthorized)
 			render.JSON(w, r, map[string]string{"error": "refresh token required"})
 			return
 		}
 
-		newAccessToken, newRefreshToken, err := repo.RefreshTokens(r.Context(), cookie.Value)
+		newAccessToken, newRefreshToken, err := h.repo.RefreshTokens(r.Context(), cookie.Value)
 		if err != nil {
-			log.Error("failed to refresh tokens", zap.Error(err))
+			h.log.Error("failed to refresh tokens", zap.Error(err))
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, map[string]string{"error": "internal server error"})
 			return
 		}
 
-		repoImpl, ok := repo.(*repository.Repository)
+		repoImpl, ok := h.repo.(*repository.Repository)
 		if !ok {
-			log.Error("invalid repository type")
+			h.log.Error("invalid repository type")
 			w.WriteHeader(http.StatusInternalServerError)
 			render.JSON(w, r, map[string]string{"error": "internal server error"})
 			return
@@ -122,6 +134,60 @@ func Refresh(log *zap.SugaredLogger, repo service.Repository) http.HandlerFunc {
 			"refresh_token_expires_in": int(repoImpl.RefreshTokenTTL.Seconds()),
 		})
 	}
+}
+func (h *AuthHandler) Logout() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		t, err := getRefreshToken(r)
+		if err != nil || t == "" {
+			h.log.Warn("refresh token cookie not found", zap.Error(err))
+			w.WriteHeader(http.StatusUnauthorized)
+			render.JSON(w, r, map[string]string{"error": "invalid refresh token"})
+			return
+		}
+		err = h.repo.Logout(r.Context(), t)
+		if err != nil {
+			h.log.Error("failed to logout", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			render.JSON(w, r, map[string]string{"error": "internal server error"})
+			return
+		}
+		clearAuthCookies(w)
+		w.WriteHeader(http.StatusOK)
+	}
+}
+func (h *AuthHandler) DeleteAccount() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		token, err := getRefreshToken(r)
+		if err != nil {
+			h.log.Warn("refresh token cookie not found", zap.Error(err))
+			w.WriteHeader(http.StatusUnauthorized)
+			render.JSON(w, r, map[string]string{"error": "invalid refresh token"})
+			return
+		}
+		user, err := jwt.VerifyToken(token)
+		if err != nil {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		userID, _ := strconv.ParseInt(user.ID, 10, 64)
+		if err = h.repo.DeleteAccount(r.Context(), userID); err != nil {
+			h.log.Error("failed to delete account", zap.Error(err))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+
+		clearAuthCookies(w)
+
+		w.WriteHeader(http.StatusNoContent)
+	}
+}
+
+func getRefreshToken(r *http.Request) (string, error) {
+	cookie, err := r.Cookie("refresh_token")
+	if err != nil {
+		return "", err
+	}
+	return cookie.Value, nil
 }
 func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, accessTTL, refreshTTL time.Duration) {
 	http.SetCookie(w, &http.Cookie{
@@ -137,10 +203,31 @@ func setAuthCookies(w http.ResponseWriter, accessToken, refreshToken string, acc
 	http.SetCookie(w, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshToken,
-		Path:     "/refresh",
+		Path:     "/",
 		HttpOnly: true,
 		Secure:   false,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   int(refreshTTL.Seconds()),
+	})
+}
+func clearAuthCookies(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "access_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
+	})
+
+	http.SetCookie(w, &http.Cookie{
+		Name:     "refresh_token",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		Secure:   false,
+		SameSite: http.SameSiteStrictMode,
 	})
 }

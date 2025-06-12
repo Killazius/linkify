@@ -1,57 +1,56 @@
-package transport
+package httpapi
 
 import (
 	"auth/internal/config"
-	"auth/internal/service"
-	"auth/internal/transport/handlers"
+	"auth/internal/transport/grpcapi"
+	"auth/internal/transport/httpapi/handlers"
 	"context"
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/render"
 	"go.uber.org/zap"
 	"net/http"
 )
 
 type Server struct {
 	server *http.Server
-	router *chi.Mux
 	log    *zap.SugaredLogger
-	repo   service.Repository
 	config config.HTTPConfig
 }
 
-func New(
-	cfg config.HTTPConfig,
-	repo service.Repository,
+func NewServer(
 	log *zap.SugaredLogger,
+	authService grpcapi.Repository,
+	cfg config.HTTPConfig,
 ) *Server {
-	router := chi.NewRouter()
-	srv := &Server{
+	r := chi.NewRouter()
+
+	r.Use(middleware.RequestID)
+	r.Use(middleware.Recoverer)
+	r.Use(middleware.URLFormat)
+	r.Use(render.SetContentType(render.ContentTypeJSON))
+
+	authHandler := handlers.NewAuthHandler(log, authService)
+
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", authHandler.Register())
+		r.Post("/login", authHandler.Login())
+		r.Post("/refresh", authHandler.Refresh())
+		r.Delete("/logout", authHandler.Logout())
+		r.Delete("/account", authHandler.DeleteAccount())
+	})
+
+	return &Server{
+		log: log,
 		server: &http.Server{
 			Addr:         "0.0.0.0:" + cfg.Port,
 			ReadTimeout:  cfg.Timeout,
 			WriteTimeout: cfg.Timeout,
 			IdleTimeout:  cfg.IdleTimeout,
-			Handler:      router,
+			Handler:      r,
 		},
-		router: router,
-		log:    log,
-		repo:   repo,
-		config: cfg,
 	}
-
-	srv.registerRoutes()
-	return srv
-}
-
-func (s *Server) registerRoutes() {
-	s.router.Use(middleware.RequestID)
-	s.router.Use(middleware.Recoverer)
-	s.router.Use(middleware.URLFormat)
-	s.router.Post("/register", handlers.Register(s.log, s.repo))
-	s.router.Post("/login", handlers.Login(s.log, s.repo))
-	s.router.Post("/refresh", handlers.Refresh(s.log, s.repo))
-
 }
 
 func (s *Server) MustRun() {
@@ -71,8 +70,4 @@ func (s *Server) Stop(ctx context.Context) {
 	if err := s.server.Shutdown(ctx); err != nil {
 		s.log.Error("failed to stop HTTP server", zap.Error(err))
 	}
-	//err := s.repo.Stop()
-	//if err != nil {
-	//	s.log.Error("failed to stop repository client", zap.Error(err))
-	//}
 }
