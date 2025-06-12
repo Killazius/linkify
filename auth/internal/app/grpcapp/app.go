@@ -1,7 +1,7 @@
 package grpcapp
 
 import (
-	"auth/internal/transport/grpcapi"
+	"auth/internal/transport/rpc"
 	"fmt"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -13,9 +13,9 @@ type App struct {
 	port   int
 }
 
-func New(port int, repo *grpcapi.Service) *App {
+func New(port int, repo *rpc.Service) *App {
 	grpcServer := grpc.NewServer()
-	grpcapi.Register(grpcServer, repo)
+	rpc.Register(grpcServer, repo)
 	return &App{
 		server: grpcServer,
 		port:   port,
@@ -34,7 +34,7 @@ func (a *App) Run() error {
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	zap.L().Info("grpcapi server started", zap.String("addr", lis.Addr().String()))
+	zap.L().Info("rpc server started", zap.String("addr", lis.Addr().String()))
 	if err := a.server.Serve(lis); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
@@ -42,6 +42,6 @@ func (a *App) Run() error {
 }
 
 func (a *App) Stop() {
-	zap.L().Info("grpcapi server stopped")
+	zap.L().Info("rpc server stopped")
 	a.server.GracefulStop()
 }

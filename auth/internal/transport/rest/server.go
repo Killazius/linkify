@@ -1,9 +1,9 @@
-package httpapi
+package rest
 
 import (
 	"auth/internal/config"
-	"auth/internal/transport/grpcapi"
-	"auth/internal/transport/httpapi/handlers"
+	"auth/internal/transport"
+	"auth/internal/transport/rest/handlers"
 	"context"
 	"errors"
 	"github.com/go-chi/chi/v5"
@@ -20,7 +20,7 @@ type Server struct {
 
 func NewServer(
 	log *zap.SugaredLogger,
-	authService grpcapi.Repository,
+	authService transport.Repository,
 	cfg config.HTTPConfig,
 ) *Server {
 	r := chi.NewRouter()

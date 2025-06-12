@@ -3,7 +3,7 @@ package handlers
 import (
 	"auth/internal/lib/jwt"
 	"auth/internal/repository"
-	"auth/internal/transport/grpcapi"
+	"auth/internal/transport"
 	"errors"
 	"github.com/go-chi/render"
 	"go.uber.org/zap"
@@ -14,10 +14,10 @@ import (
 
 type AuthHandler struct {
 	log  *zap.SugaredLogger
-	repo grpcapi.Repository
+	repo transport.Repository
 }
 
-func NewAuthHandler(log *zap.SugaredLogger, authService grpcapi.Repository) *AuthHandler {
+func NewAuthHandler(log *zap.SugaredLogger, authService transport.Repository) *AuthHandler {
 	return &AuthHandler{
 		log:  log,
 		repo: authService,

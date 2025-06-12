@@ -5,8 +5,8 @@ import (
 	"auth/internal/config"
 	"auth/internal/repository"
 	"auth/internal/storage/postgresql"
-	"auth/internal/transport/grpcapi"
-	"auth/internal/transport/httpapi"
+	"auth/internal/transport/rest"
+	"auth/internal/transport/rpc"
 	"context"
 	"go.uber.org/zap"
 )
@@ -14,7 +14,7 @@ import (
 type App struct {
 	log        *zap.SugaredLogger
 	GRPCServer *grpcapp.App
-	HTTPServer *httpapi.Server
+	HTTPServer *rest.Server
 	storage    *postgresql.Storage
 }
 
@@ -24,9 +24,9 @@ func New(log *zap.SugaredLogger, cfg *config.Config) *App {
 		log.Fatal(err)
 	}
 	repo := repository.New(log, storage, storage, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
-	s := grpcapi.New(repo)
+	s := rpc.New(repo)
 	GRPCServer := grpcapp.New(cfg.GRPCServer.Port, s)
-	HTTPServer := httpapi.NewServer(log, repo, cfg.HTTPServer)
+	HTTPServer := rest.NewServer(log, repo, cfg.HTTPServer)
 	return &App{
 		log:        log,
 		GRPCServer: GRPCServer,
