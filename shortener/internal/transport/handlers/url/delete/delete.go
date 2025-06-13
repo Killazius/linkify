@@ -47,7 +47,7 @@ func New(log *zap.SugaredLogger, URLDeleter URLDeleter, CacheDeleter CacheDelete
 		alias := chi.URLParam(r, "alias")
 		if alias == "" {
 			log.Info("alias is empty")
-			w.WriteHeader(http.StatusBadRequest)
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, resp.Error("invalid request"))
 			return
 		}
@@ -59,17 +59,17 @@ func New(log *zap.SugaredLogger, URLDeleter URLDeleter, CacheDeleter CacheDelete
 		if err != nil {
 			if errors.Is(err, storage.ErrURLNotFound) {
 				log.Infow("alias not found", "alias", alias)
-				w.WriteHeader(http.StatusNotFound)
+				render.Status(r, http.StatusNotFound)
 				render.JSON(w, r, resp.Error("alias not found"))
 				return
 			}
 			log.Error("failed to get alias", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
+			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, resp.Error("failed to get alias"))
 			return
 		}
 		log.Infow("delete alias", "alias", alias)
 		m.IncLinksDeleted()
-		w.WriteHeader(http.StatusNoContent)
+		render.Status(r, http.StatusNoContent)
 	}
 }

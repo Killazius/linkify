@@ -3,10 +3,12 @@ package auth
 import (
 	"context"
 	"github.com/Killazius/linkify-proto/pkg/api"
+	"github.com/go-chi/render"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
+	"linkify/internal/lib/api/response"
 	"net/http"
 )
 
@@ -27,7 +29,8 @@ func New(auth Client, log *zap.SugaredLogger) func(next http.Handler) http.Handl
 			cookie, err := r.Cookie("access_token")
 			if err != nil {
 				log.Debug("Access token cookie not found")
-				http.Error(w, "Unauthorized", http.StatusUnauthorized)
+				w.WriteHeader(http.StatusUnauthorized)
+				render.JSON(w, r, response.Error("Unauthorized"))
 				return
 			}
 
@@ -37,17 +40,20 @@ func New(auth Client, log *zap.SugaredLogger) func(next http.Handler) http.Handl
 			if err != nil {
 				if status.Code(err) == codes.Unauthenticated {
 					log.Debug("Invalid token", zap.Error(err))
-					http.Error(w, "Invalid token", http.StatusUnauthorized)
+					w.WriteHeader(http.StatusUnauthorized)
+					render.JSON(w, r, response.Error("Unauthorized"))
 					return
 				}
 				log.Error("Failed to validate token", zap.Error(err))
-				http.Error(w, "Internal server error", http.StatusInternalServerError)
+				w.WriteHeader(http.StatusInternalServerError)
+				render.JSON(w, r, response.Error("Internal server error"))
 				return
 			}
 
 			if !resp.Valid {
 				log.Debug("Token validation failed", zap.String("error", resp.Error))
-				http.Error(w, "Invalid token", http.StatusUnauthorized)
+				w.WriteHeader(http.StatusUnauthorized)
+				render.JSON(w, r, response.Error("Unauthorized"))
 				return
 			}
 

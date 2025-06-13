@@ -70,7 +70,7 @@ func New(log *zap.SugaredLogger, urlSaver URLSaver, CacheSaver CacheSaver, alias
 		if err != nil {
 			log.Error("failed to decode request", zap.Error(err))
 
-			w.WriteHeader(http.StatusBadRequest)
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, response.Error("failed to decode request"))
 			return
 		}
@@ -82,7 +82,7 @@ func New(log *zap.SugaredLogger, urlSaver URLSaver, CacheSaver CacheSaver, alias
 			errors.As(err, &validateErrs)
 
 			log.Error("failed to validate request", zap.Error(err))
-			w.WriteHeader(http.StatusBadRequest)
+			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, response.ValidateError(validateErrs))
 			return
 		}
@@ -90,7 +90,7 @@ func New(log *zap.SugaredLogger, urlSaver URLSaver, CacheSaver CacheSaver, alias
 		alias, err := generateUniqueAlias(log, urlSaver, req.URL, aliasLength, now)
 		if err != nil {
 			log.Error("failed to generate unique alias after multiple attempts", zap.Error(err))
-			w.WriteHeader(http.StatusInternalServerError)
+			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, response.Error("failed to generate unique alias"))
 			return
 		}
@@ -99,6 +99,7 @@ func New(log *zap.SugaredLogger, urlSaver URLSaver, CacheSaver CacheSaver, alias
 		}
 		m.IncLinksCreated()
 		log.Infow("new URL added", "url", req.URL)
+		render.Status(r, http.StatusCreated)
 		render.JSON(w, r, Response{
 			Response:  response.OK(),
 			Alias:     alias,

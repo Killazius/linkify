@@ -5,8 +5,8 @@ import (
 	"auth/internal/storage"
 	"context"
 	"errors"
-	"fmt"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"time"
 )
 
@@ -18,7 +18,7 @@ func (s *Storage) StoreRefreshToken(
 ) error {
 	hash, err := jwt.HashToken(token)
 	if err != nil {
-		return fmt.Errorf("failed to hash token: %w", err)
+		return errors.Join(storage.ErrTokenProcessing, err)
 	}
 
 	query := `
@@ -29,7 +29,11 @@ func (s *Storage) StoreRefreshToken(
 
 	_, err = s.db.Exec(ctx, query, hash, userID, expiresAt)
 	if err != nil {
-		return fmt.Errorf("failed to store refresh token: %w", err)
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == "23503" {
+			return storage.ErrUserNotFound
+		}
+		return err
 	}
 
 	return nil
@@ -38,17 +42,17 @@ func (s *Storage) StoreRefreshToken(
 func (s *Storage) GetRefreshToken(ctx context.Context, tokenHash string) (*storage.RefreshToken, error) {
 	query := `
 		SELECT 
-    rt.token_hash, 
-    rt.user_id,
-    u.email,
-    rt.expires_at, 
-    rt.created_at
-FROM 
-    auth_schema.refresh_tokens rt
-JOIN 
-    auth_schema.users u ON rt.user_id = u.id
-WHERE 
-    rt.token_hash = $1`
+			rt.token_hash, 
+			rt.user_id,
+			u.email,
+			rt.expires_at, 
+			rt.created_at
+		FROM 
+			auth_schema.refresh_tokens rt
+		JOIN 
+			auth_schema.users u ON rt.user_id = u.id
+		WHERE 
+			rt.token_hash = $1`
 
 	var rt storage.RefreshToken
 	err := s.db.QueryRow(ctx, query, tokenHash).Scan(
@@ -61,9 +65,9 @@ WHERE
 
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, nil
+			return nil, storage.ErrTokenNotFound
 		}
-		return nil, fmt.Errorf("failed to get refresh token: %w", err)
+		return nil, err
 	}
 
 	return &rt, nil
@@ -72,7 +76,7 @@ WHERE
 func (s *Storage) ValidateRefreshToken(ctx context.Context, token string) (*storage.RefreshToken, error) {
 	hash, err := jwt.HashToken(token)
 	if err != nil {
-		return nil, fmt.Errorf("failed to hash token: %w", err)
+		return nil, errors.Join(storage.ErrTokenProcessing, err)
 	}
 
 	rt, err := s.GetRefreshToken(ctx, hash)
@@ -80,12 +84,8 @@ func (s *Storage) ValidateRefreshToken(ctx context.Context, token string) (*stor
 		return nil, err
 	}
 
-	if rt == nil {
-		return nil, fmt.Errorf("refresh token not found")
-	}
-
 	if time.Now().After(rt.ExpiresAt) {
-		return nil, fmt.Errorf("refresh token expired")
+		return nil, storage.ErrTokenExpired
 	}
 
 	return rt, nil
@@ -97,11 +97,7 @@ func (s *Storage) DeleteRefreshToken(ctx context.Context, tokenHash string) erro
 		WHERE token_hash = $1`
 
 	_, err := s.db.Exec(ctx, query, tokenHash)
-	if err != nil {
-		return fmt.Errorf("failed to delete refresh token: %w", err)
-	}
-
-	return nil
+	return err
 }
 
 func (s *Storage) DeleteRefreshTokenByUserID(ctx context.Context, userID int64) error {
@@ -110,11 +106,7 @@ func (s *Storage) DeleteRefreshTokenByUserID(ctx context.Context, userID int64) 
 		WHERE user_id = $1`
 
 	_, err := s.db.Exec(ctx, query, userID)
-	if err != nil {
-		return fmt.Errorf("failed to delete refresh tokens by user ID: %w", err)
-	}
-
-	return nil
+	return err
 }
 
 func (s *Storage) DeleteExpiredRefreshTokens(ctx context.Context) error {
@@ -123,9 +115,5 @@ func (s *Storage) DeleteExpiredRefreshTokens(ctx context.Context) error {
 		WHERE expires_at < NOW()`
 
 	_, err := s.db.Exec(ctx, query)
-	if err != nil {
-		return fmt.Errorf("failed to delete expired refresh tokens: %w", err)
-	}
-
-	return nil
+	return err
 }
