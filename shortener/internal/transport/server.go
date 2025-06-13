@@ -87,16 +87,16 @@ func (s *Server) registerRoutes() {
 	s.router.Use(customLogger.New(s.log))
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.URLFormat)
-	s.router.Use(auth.New(s.client, s.log))
 	s.router.Get("/swagger/*", httpSwagger.Handler(
 		httpSwagger.URL(fmt.Sprintf("http://%s/swagger/doc.json", s.config.IP)),
 	))
-
-	s.router.Post("/url", save.New(s.log, s.repo, s.cache, s.config.AliasLength, s.metrics))
 	s.router.Get("/{alias}", redirect.New(s.log, s.repo, s.cache, s.metrics))
-	s.router.Delete("/url/{alias}", delete.New(s.log, s.repo, s.cache, s.metrics))
-}
 
+	s.router.With(auth.New(s.client, s.log)).Route("/api", func(r chi.Router) {
+		r.Post("/url", save.New(s.log, s.repo, s.cache, s.config.AliasLength, s.metrics))
+		r.Delete("/url/{alias}", delete.New(s.log, s.repo, s.cache, s.metrics))
+	})
+}
 func (s *Server) MustRun() {
 	if err := s.Run(); err != nil {
 		s.log.Fatal("failed to run HTTP-server", zap.Error(err))

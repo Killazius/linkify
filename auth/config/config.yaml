@@ -7,5 +7,5 @@ http_server:
   timeout: 5s
   idle_timeout: 60s
 migrations_path: "migrations"
-access_token_ttl: 1m
+access_token_ttl: 15m
 refresh_token_ttl: 24h

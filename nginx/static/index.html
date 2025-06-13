@@ -27,6 +27,13 @@
             display: flex;
             gap: 10px;
             justify-content: center;
+            margin-bottom: 10px;
+        }
+        .auth-button-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
         }
         button {
             background-color: #4CAF50;
@@ -46,6 +53,18 @@
         }
         #docs-button:hover {
             background-color: #0b7dda;
+        }
+        #register-button {
+            background-color: #ff9800;
+        }
+        #register-button:hover {
+            background-color: #e68a00;
+        }
+        #login-button {
+            background-color: #9c27b0;
+        }
+        #login-button:hover {
+            background-color: #7b1fa2;
         }
         #result {
             margin-top: 20px;
@@ -81,6 +100,25 @@
         h1 a:visited {
             color: #333;
         }
+        .auth-form {
+            display: none;
+            margin-top: 20px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background-color: #f9f9f9;
+        }
+        .auth-form input {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 16px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .auth-form button {
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body>
@@ -91,6 +129,30 @@
     <button id="docs-button" onclick="window.location.href='/swagger'">API Documentation</button>
 </div>
 <div id="result"></div>
+
+<div class="auth-button-container">
+    <button id="register-button" onclick="showAuthForm('register')">Register</button>
+    <button id="login-button" onclick="showAuthForm('login')">Login</button>
+</div>
+
+<div id="register-form" class="auth-form">
+    <h3>Register</h3>
+    <input type="email" id="register-email" placeholder="Email">
+    <input type="password" id="register-password" placeholder="Password">
+    <button onclick="register()">Submit</button>
+    <button onclick="hideAuthForms()">Cancel</button>
+    <div id="register-result"></div>
+</div>
+
+<div id="login-form" class="auth-form">
+    <h3>Login</h3>
+    <input type="email" id="login-email" placeholder="Email">
+    <input type="password" id="login-password" placeholder="Password">
+    <button onclick="login()">Submit</button>
+    <button onclick="hideAuthForms()">Cancel</button>
+    <div id="login-result"></div>
+</div>
+
 <script>
     async function shortenUrl() {
         const urlInput = document.getElementById('url-input').value.trim();
@@ -103,7 +165,7 @@
         }
 
         try {
-            const response = await fetch('/url', {
+            const response = await fetch('api/url', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -127,6 +189,94 @@
             resultDiv.className = 'error';
             resultDiv.innerHTML = `Error: ${error.message}`;
             console.error('Error:', error);
+        }
+    }
+
+    function showAuthForm(formType) {
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'none';
+        document.getElementById(`${formType}-form`).style.display = 'block';
+    }
+
+    function hideAuthForms() {
+        document.getElementById('register-form').style.display = 'none';
+        document.getElementById('login-form').style.display = 'none';
+    }
+
+    async function register() {
+        const email = document.getElementById('register-email').value.trim();
+        const password = document.getElementById('register-password').value.trim();
+        const resultDiv = document.getElementById('register-result');
+
+        if (!email || !password) {
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = 'Please fill all fields';
+            return;
+        }
+
+        try {
+            const response = await fetch('/auth/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Registration failed');
+            }
+
+            const data = await response.json();
+            resultDiv.className = 'success';
+            resultDiv.innerHTML = 'Registration successful!';
+            hideAuthForms();
+
+        } catch (error) {
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = `Error: ${error.message}`;
+            console.error('Registration error:', error);
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById('login-email').value.trim();
+        const password = document.getElementById('login-password').value.trim();
+        const resultDiv = document.getElementById('login-result');
+
+        if (!email || !password) {
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = 'Please fill all fields';
+            return;
+        }
+
+        try {
+            const response = await fetch('/auth/login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ email, password }),
+                credentials: 'include'
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || 'Login failed');
+            }
+
+            const data = await response.json();
+            resultDiv.className = 'success';
+            resultDiv.innerHTML = 'Login successful!';
+            hideAuthForms();
+
+            console.log('Login successful', data);
+
+        } catch (error) {
+            resultDiv.className = 'error';
+            resultDiv.innerHTML = `Error: ${error.message}`;
+            console.error('Login error:', error);
         }
     }
 </script>
