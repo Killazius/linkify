@@ -25,10 +25,35 @@ services:
     depends_on:
       - postgres
       - redis
+      - auth
     networks:
       - backend
       - frontend
-
+  auth:
+    container_name: auth
+    restart: on-failure
+    deploy:
+      restart_policy:
+        condition: on-failure
+        max_attempts: 3
+        delay: 5s
+    build:
+      context: auth
+      dockerfile: Dockerfile
+    image: linkify-auth:latest
+    environment:
+      CONFIG_PATH: ${CONFIG_PATH}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      - postgres
+    networks:
+      - backend
+      - frontend
   nginx:
     image: nginx:latest
     container_name: nginx
