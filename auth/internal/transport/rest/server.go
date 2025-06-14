@@ -8,6 +8,7 @@ import (
 	"errors"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 	"go.uber.org/zap"
 	"net/http"
@@ -29,13 +30,20 @@ func NewServer(
 	r.Use(middleware.Recoverer)
 	r.Use(middleware.URLFormat)
 	r.Use(render.SetContentType(render.ContentTypeJSON))
-
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
+		ExposedHeaders:   []string{"Link"},
+		AllowCredentials: true,
+		MaxAge:           300,
+	}))
 	authHandler := handlers.NewAuthHandler(log, authService)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", authHandler.Register())
 		r.Post("/login", authHandler.Login())
-		r.Post("/refresh", authHandler.Refresh())
+		r.Get("/refresh", authHandler.Refresh())
 		r.Delete("/logout", authHandler.Logout())
 		r.Delete("/account", authHandler.DeleteAccount())
 	})

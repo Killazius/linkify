@@ -71,5 +71,6 @@ func New(log *zap.SugaredLogger, URLDeleter URLDeleter, CacheDeleter CacheDelete
 		log.Infow("delete alias", "alias", alias)
 		m.IncLinksDeleted()
 		render.Status(r, http.StatusNoContent)
+		render.NoContent(w, r)
 	}
 }

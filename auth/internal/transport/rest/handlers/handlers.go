@@ -171,6 +171,7 @@ func (h *AuthHandler) Logout() http.HandlerFunc {
 
 		clearAuthCookies(w)
 		render.Status(r, http.StatusNoContent)
+		render.NoContent(w, r)
 	}
 }
 
@@ -209,6 +210,7 @@ func (h *AuthHandler) DeleteAccount() http.HandlerFunc {
 
 		clearAuthCookies(w)
 		render.Status(r, http.StatusNoContent)
+		render.NoContent(w, r)
 	}
 }
 

@@ -30,7 +30,7 @@ func TestSaveHandler(t *testing.T) {
 		{
 			name:       "Success",
 			url:        "https://google.com",
-			statusCode: http.StatusOK,
+			statusCode: http.StatusCreated,
 			body:       fmt.Sprintf(`{"url": "%s"}`, "https://google.com"),
 		},
 		{
