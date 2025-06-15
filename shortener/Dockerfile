@@ -6,7 +6,7 @@ RUN go mod download
 RUN go install github.com/swaggo/swag/cmd/swag@latest
 COPY . .
 RUN swag init -g ./cmd/linkify/main.go -o ./docs
-RUN CGO_ENABLED=0 go build -o app ./cmd/linkify/
+RUN GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="-s -w" -o app ./cmd/linkify/ upx --best app
 
 FROM alpine:3.21
 WORKDIR /cmd

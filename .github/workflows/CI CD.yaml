@@ -106,14 +106,14 @@ jobs:
       - name: Stop containers
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose down"
 
-      - name: Build new image SHORTENER
-        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && COMPOSE_BAKE=true docker compose build web"
+      - name: Cleanup images
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker image prune -f"
 
       - name: Build new image AUTH
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && COMPOSE_BAKE=true docker compose build auth"
 
-      - name: Cleanup images
-        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker image prune -f"
+      - name: Build new image SHORTENER
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && COMPOSE_BAKE=true docker compose build web"
 
       - name: Build and start
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose up -d"
