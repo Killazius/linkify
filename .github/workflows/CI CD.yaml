@@ -7,7 +7,7 @@ on:
     branches: ["master"]
 
 jobs:
-  tests:
+  tests-shortener:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -18,13 +18,13 @@ jobs:
           go-version: 'stable'
           cache: false
 
-      - name: Download dependencies
+      - name: Download dependencies (shortener)
         working-directory: ./shortener
         run: |
           go mod tidy
           go mod download
 
-      - name: Lint
+      - name: Lint (shortener)
         uses: golangci/golangci-lint-action@v4
         with:
           version: latest
@@ -34,19 +34,57 @@ jobs:
           skip-pkg-cache: true
           skip-build-cache: true
 
-      - name: Test
+      - name: Test (shortener)
         working-directory: ./shortener
         run: |
           go test -v -race -parallel 5 -shuffle=on -coverprofile=./cover.out -covermode=atomic ./...
 
-      - name: Check coverage
+      - name: Check coverage (shortener)
         uses: vladopajic/go-test-coverage@v2
         with:
           profile: shortener/cover.out
           source-dir: shortener
 
+  tests-auth:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: 'stable'
+          cache: false
+
+      - name: Download dependencies (auth)
+        working-directory: ./auth
+        run: |
+          go mod tidy
+          go mod download
+
+      - name: Lint (auth)
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          working-directory: ./auth
+          args: --out-format=tab
+          skip-cache: true
+          skip-pkg-cache: true
+          skip-build-cache: true
+
+      - name: Test (auth)
+        working-directory: ./auth
+        run: |
+          go test -v -race -parallel 5 -shuffle=on -coverprofile=./cover.out -covermode=atomic ./...
+
+      - name: Check coverage (auth)
+        uses: vladopajic/go-test-coverage@v2
+        with:
+          profile: auth/cover.out
+          source-dir: auth
+
   deploy:
-    needs: tests
+    needs: [tests-shortener, tests-auth]
     if: github.ref == 'refs/heads/master' && github.event_name == 'push'
 
     runs-on: ubuntu-latest
@@ -68,8 +106,11 @@ jobs:
       - name: Stop containers
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && docker compose down"
 
-      - name: Build new image
+      - name: Build new image SHORTENER
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && COMPOSE_BAKE=true docker compose build web"
+
+      - name: Build new image AUTH
+        run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "cd ${{ secrets.SERVER_PATH }} && COMPOSE_BAKE=true docker compose build auth"
 
       - name: Cleanup images
         run: ssh ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} "docker image prune -f"
