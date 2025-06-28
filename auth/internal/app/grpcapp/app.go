@@ -9,16 +9,16 @@ import (
 )
 
 type App struct {
-	server *grpc.Server
-	port   int
+	server  *grpc.Server
+	address string
 }
 
-func New(port int, repo *rpc.Service) *App {
+func New(address string, repo *rpc.Service) *App {
 	grpcServer := grpc.NewServer()
 	rpc.Register(grpcServer, repo)
 	return &App{
-		server: grpcServer,
-		port:   port,
+		server:  grpcServer,
+		address: address,
 	}
 }
 
@@ -30,11 +30,11 @@ func (a *App) MustRun() {
 
 func (a *App) Run() error {
 	const op = "grpcApp.Run"
-	lis, err := net.Listen("tcp", fmt.Sprintf("0.0.0.0:%d", a.port))
+	lis, err := net.Listen("tcp", a.address)
 	if err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}
-	zap.L().Info("rpc server started", zap.String("addr", lis.Addr().String()))
+	zap.L().Info("rpc server started", zap.String("addr", a.address))
 	if err := a.server.Serve(lis); err != nil {
 		return fmt.Errorf("%s: %w", op, err)
 	}

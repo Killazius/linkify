@@ -48,7 +48,7 @@ func (h *AuthHandler) Register() http.HandlerFunc {
 		if err != nil {
 			switch {
 			case errors.Is(err, repository.ErrInvalidCredentials):
-				h.log.Warn("registration failed - user exists", zap.String("email", req.Email))
+				h.log.Warnw("registration failed - user exists", zap.String("email", req.Email))
 				render.Status(r, http.StatusConflict)
 				render.JSON(w, r, ErrorResponse{"user already exists"})
 			default:
@@ -59,6 +59,7 @@ func (h *AuthHandler) Register() http.HandlerFunc {
 			return
 		}
 
+		h.log.Infow("user registered", zap.String("email", req.Email))
 		render.Status(r, http.StatusCreated)
 		render.JSON(w, r, map[string]int64{"user_id": uid})
 	}
@@ -82,7 +83,7 @@ func (h *AuthHandler) Login() http.HandlerFunc {
 		if err != nil {
 			switch {
 			case errors.Is(err, repository.ErrInvalidCredentials):
-				h.log.Warn("invalid login attempt", zap.String("email", req.Email))
+				h.log.Warnw("invalid login attempt", zap.String("email", req.Email))
 				render.Status(r, http.StatusUnauthorized)
 				render.JSON(w, r, ErrorResponse{"invalid credentials"})
 			default:
@@ -101,6 +102,7 @@ func (h *AuthHandler) Login() http.HandlerFunc {
 			return
 		}
 
+		h.log.Infow("user logged in", zap.String("email", req.Email))
 		setAuthCookies(w, accessToken, refreshToken, repoImpl.AccessTokenTTL, repoImpl.RefreshTokenTTL)
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, TokenResponse{
@@ -143,6 +145,7 @@ func (h *AuthHandler) Refresh() http.HandlerFunc {
 			return
 		}
 
+		h.log.Infow("user refreshed", zap.String("refresh_token", newRefreshToken))
 		setAuthCookies(w, newAccessToken, newRefreshToken, repoImpl.AccessTokenTTL, repoImpl.RefreshTokenTTL)
 		render.Status(r, http.StatusOK)
 		render.JSON(w, r, TokenResponse{
@@ -195,19 +198,20 @@ func (h *AuthHandler) DeleteAccount() http.HandlerFunc {
 
 		userID, err := strconv.ParseInt(user.ID, 10, 64)
 		if err != nil {
-			h.log.Error("invalid user ID in token", zap.String("id", user.ID))
+			h.log.Errorw("invalid user ID in token", zap.String("id", user.ID))
 			render.Status(r, http.StatusBadRequest)
 			render.JSON(w, r, ErrorResponse{"invalid user ID"})
 			return
 		}
 
-		if err := h.repo.DeleteAccount(r.Context(), userID); err != nil {
+		if err = h.repo.DeleteAccount(r.Context(), userID); err != nil {
 			h.log.Error("failed to delete account", zap.Error(err))
 			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, ErrorResponse{"internal server error"})
 			return
 		}
 
+		h.log.Infow("user deleted", zap.String("id", user.ID))
 		clearAuthCookies(w)
 		render.Status(r, http.StatusNoContent)
 		render.NoContent(w, r)

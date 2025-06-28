@@ -49,16 +49,18 @@ type MetricsSaver interface {
 }
 
 // New handles the save of a URL by its alias.
-// @Summary      Save URL for alias
-// @Description  Save alias by URL
+// @Summary      Save URL
+// @Description  Saves a URL and generates a unique alias
 // @Tags         url
 // @Accept       json
 // @Produce      json
-// @Param        request body Request true "Request body"
-// @Success      200  {object}  Response  "URL saved successfully"
-// @Failure      400  {object}  response.Response  "Invalid request"
+// @Security     ApiKeyAuth
+// @Param        request body Request true "URL to save"
+// @Success      201  {object}  Response  "URL saved successfully"
+// @Failure      400  {object}  response.Response  "Invalid request or validation error"
+// @Failure      401  {object}  response.Response  "Unauthorized"
 // @Failure      500  {object}  response.Response  "Internal server error"
-// @Router       /url [post]
+// @Router       /api/url [post]
 func New(log *zap.SugaredLogger, urlSaver URLSaver, CacheSaver CacheSaver, aliasLength int, m MetricsSaver) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := log.With(

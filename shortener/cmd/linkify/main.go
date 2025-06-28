@@ -18,7 +18,7 @@ import (
 )
 
 // @title           Linkify
-// @version         1.4
+// @version         1.5
 // @description     Link shortening service.
 
 // @contact.name Telegram Developer
@@ -27,7 +27,7 @@ import (
 // @license.name Apache 2.0
 // @license.url http://www.apache.org/licenses/LICENSE-2.0.html
 
-// @host localhost:8080
+// @host 127.0.0.1:8080
 // @BasePath /
 func main() {
 	cfg := config.MustLoad()

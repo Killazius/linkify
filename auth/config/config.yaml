@@ -1,8 +1,10 @@
 logger_path: "config/logger.json"
 grpc_server:
-  port: 50051
+  host: "0.0.0.0"
+  port: "50051"
   timeout: 5s
 http_server:
+  host: "0.0.0.0"
   port: "8085"
   timeout: 5s
   idle_timeout: 60s

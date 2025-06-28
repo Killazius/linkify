@@ -9,6 +9,7 @@ import (
 	"auth/internal/transport/rpc"
 	"context"
 	"go.uber.org/zap"
+	"net"
 )
 
 type App struct {
@@ -25,7 +26,7 @@ func New(log *zap.SugaredLogger, cfg *config.Config) *App {
 	}
 	repo := repository.New(log, storage, storage, cfg.AccessTokenTTL, cfg.RefreshTokenTTL)
 	s := rpc.New(repo)
-	GRPCServer := grpcapp.New(cfg.GRPCServer.Port, s)
+	GRPCServer := grpcapp.New(net.JoinHostPort(cfg.GRPCServer.Host, cfg.GRPCServer.Port), s)
 	HTTPServer := rest.NewServer(log, repo, cfg.HTTPServer)
 	return &App{
 		log:        log,

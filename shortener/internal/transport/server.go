@@ -89,7 +89,7 @@ func (s *Server) registerRoutes() {
 	s.router.Use(middleware.Recoverer)
 	s.router.Use(middleware.URLFormat)
 	s.router.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{"http://127.0.0.1"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},

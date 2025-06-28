@@ -28,17 +28,19 @@ type MetricsDeleter interface {
 }
 
 // New handles the deletion of a URL by its alias.
-// @Summary      Delete alias for URL
-// @Description  Delete URL by alias
+// @Summary      Delete URL
+// @Description  Deletes a saved URL using its alias
 // @Tags         url
 // @Accept       json
 // @Produce      json
-// @Param        alias   path      string  true  "Alias of the URL to delete"
+// @Security     ApiKeyAuth
+// @Param        alias   path      string  true  "URL alias to delete"
 // @Success      204     "No Content"
 // @Failure      400     {object}  response.Response  "Invalid request"
+// @Failure      401     {object}  response.Response  "Unauthorized"
 // @Failure      404     {object}  response.Response  "Alias not found"
 // @Failure      500     {object}  response.Response  "Internal server error"
-// @Router       /{alias} [delete]
+// @Router       /api/url/{alias} [delete]
 func New(log *zap.SugaredLogger, URLDeleter URLDeleter, CacheDeleter CacheDeleter, m MetricsDeleter) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		log := log.With(

@@ -19,10 +19,12 @@ type Config struct {
 }
 
 type GRPCConfig struct {
-	Port    int           `yaml:"port"`
+	Host    string        `yaml:"host"`
+	Port    string        `yaml:"port"`
 	Timeout time.Duration `yaml:"timeout"`
 }
 type HTTPConfig struct {
+	Host        string        `yaml:"host"`
 	Port        string        `yaml:"port"`
 	Timeout     time.Duration `yaml:"timeout"`
 	IdleTimeout time.Duration `yaml:"idle_timeout"`

@@ -11,6 +11,7 @@ import (
 	"github.com/go-chi/cors"
 	"github.com/go-chi/render"
 	"go.uber.org/zap"
+	"net"
 	"net/http"
 )
 
@@ -31,7 +32,7 @@ func NewServer(
 	r.Use(middleware.URLFormat)
 	r.Use(render.SetContentType(render.ContentTypeJSON))
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"http://localhost:5173"},
+		AllowedOrigins:   []string{"http://127.0.0.1"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type", "X-CSRF-Token"},
 		ExposedHeaders:   []string{"Link"},
@@ -51,7 +52,7 @@ func NewServer(
 	return &Server{
 		log: log,
 		server: &http.Server{
-			Addr:         "0.0.0.0:" + cfg.Port,
+			Addr:         net.JoinHostPort(cfg.Host, cfg.Port),
 			ReadTimeout:  cfg.Timeout,
 			WriteTimeout: cfg.Timeout,
 			IdleTimeout:  cfg.IdleTimeout,

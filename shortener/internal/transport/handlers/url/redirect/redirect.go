@@ -28,12 +28,12 @@ type MetricsGetter interface {
 }
 
 // New handles the redirect of a alias by its url.
-// @Summary      Redirect to URL by alias
+// @Summary      Redirect to URL
 // @Description  Redirects to the original URL using the provided alias
 // @Tags         url
 // @Accept       json
 // @Produce      json
-// @Param        alias   path      string  true  "Alias of the URL to redirect"
+// @Param        alias   path      string  true  "URL alias"
 // @Success      302     "Found"  "Redirects to the original URL"
 // @Failure      400     {object}  response.Response  "Invalid request"
 // @Failure      404     {object}  response.Response  "Alias not found"
